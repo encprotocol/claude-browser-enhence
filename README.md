@@ -13,11 +13,12 @@ A browser-based terminal emulator with automatic syntax highlighting for termina
   - Timestamps, function calls, backtick-wrapped code
 - **Multiple shell sessions** - Tabbed interface to manage multiple concurrent shells
 - **Session persistence** - Sessions survive browser reconnects (1-hour timeout)
-- **English correction** - Select text and correct grammar/spelling using Claude AI (Haiku), with word-level diff display
-- **Theme support** - Multiple built-in themes (Midnight, Monokai, Solarized Dark, Nord, Dracula, Tokyo Night, Gruvbox)
+- **English correction** - Toggle correction mode (`Cmd+X`) to type in a dedicated panel, check grammar/spelling via Claude AI (Haiku), review word-level diffs, then accept or edit before sending to the terminal
+- **Theme support** - 18 built-in themes (Synesthesia, Dracula, Tokyo Night, Catppuccin, Nord, Gruvbox, Monokai, and more) plus full color customization via settings panel
 - **Clickable links** - URLs in terminal output are clickable and open in a new tab
-- **Image preview** - Image file paths display inline previews on hover
+- **Image paste & preview** - Paste images from clipboard into the terminal; pasted images are cached and displayed as `[Image #N]` markers. Hover to preview, click to open full-size viewer
 - **Terminal resize** - Automatic terminal resizing to fit the browser window
+- **Font settings** - Adjustable font size and line height via settings panel
 
 ## Tech Stack
 
@@ -67,5 +68,17 @@ npm test
 
 | Shortcut | Action |
 |----------|--------|
+| `Cmd+X` | Toggle English correction mode |
 | `Shift+Enter` | Send newline without executing |
-| Text selection + correction toggle | Correct selected English text via AI |
+| `Ctrl+Shift+T` | New tab |
+| `Ctrl+Shift+W` | Close current tab |
+| `Ctrl+Tab` | Next tab |
+| `Ctrl+Shift+Tab` | Previous tab |
+
+### In Correction Panel
+
+| Shortcut | Action |
+|----------|--------|
+| `Enter` | Check & correct text (input) / Accept correction (result) |
+| `Shift+Enter` | Newline in text input |
+| `Esc` | Clear text (input) / Go back to edit (result) |
