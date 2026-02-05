@@ -1,0 +1,2011 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Synesthesia Terminal</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
+  <style>
+    :root {
+      --theme-bg: #1a1a2e;
+      --theme-fg: #e2e8f0;
+      --theme-header: #16213e;
+      --theme-tabbar: #0f1729;
+      --theme-active-tab: #1a1a2e;
+      --theme-accent: #e94560;
+    }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #1a1a2e;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    header {
+      background: #16213e;
+      padding: 6px 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid #0f3460;
+    }
+    header h1 {
+      color: #e94560;
+      font-size: 16px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--theme-muted, #94a3b8);
+    }
+
+    /* Correction toggle */
+    .correction-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: var(--theme-button-bg, #1e293b);
+      border: 1px solid var(--theme-button-border, #334155);
+      border-radius: 6px;
+      color: var(--theme-muted, #64748b);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .correction-toggle:hover {
+      opacity: 0.85;
+    }
+    .correction-toggle.active {
+      background: #166534;
+      border-color: #22c55e;
+      color: #22c55e;
+    }
+    .correction-toggle .toggle-icon {
+      font-weight: bold;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ef4444;
+    }
+    .status-dot.connected {
+      background: #22c55e;
+    }
+
+    /* Tab bar (inline in header) */
+    .tab-bar {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex: 1;
+      overflow-x: auto;
+      min-width: 0;
+    }
+    .tab-bar::-webkit-scrollbar {
+      height: 4px;
+    }
+    .tab-bar::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 2px;
+    }
+    .tab {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: var(--theme-button-bg, #1e293b);
+      border: 1px solid var(--theme-button-border, #334155);
+      color: var(--theme-muted, #64748b);
+      font-size: 12px;
+      cursor: pointer;
+      border-radius: 6px;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .tab:hover {
+      opacity: 0.85;
+      color: var(--theme-fg, #94a3b8);
+    }
+    .tab.active {
+      background: var(--theme-active-tab, #1a1a2e);
+      border-color: var(--theme-accent, #e94560);
+      color: var(--theme-fg, #e2e8f0);
+    }
+    .tab .close-btn {
+      display: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      border: none;
+      background: transparent;
+      color: var(--theme-muted, #64748b);
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+    }
+    .tab:hover .close-btn,
+    .tab.active .close-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .tab .close-btn:hover {
+      background: #ef4444;
+      color: white;
+    }
+    .new-tab-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      background: transparent;
+      border: 1px dashed var(--theme-button-border, #334155);
+      border-radius: 6px;
+      color: var(--theme-muted, #64748b);
+      cursor: pointer;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .new-tab-btn:hover {
+      background: var(--theme-button-bg, #1e293b);
+      border-color: var(--theme-button-border, #475569);
+      color: var(--theme-fg, #94a3b8);
+    }
+
+    #terminal-container {
+      flex: 1;
+      padding: 10px;
+      overflow: hidden;
+      position: relative;
+    }
+    #terminal {
+      height: 100%;
+    }
+
+    /* Unified Correction Panel */
+    .correction-panel {
+      display: none;
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      right: 20px;
+      background: var(--theme-header, #1e293b);
+      border: 1px solid var(--theme-accent, #3b82f6);
+      border-radius: 8px;
+      padding: 12px;
+      z-index: 1000;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+
+    .correction-panel.visible {
+      display: block;
+    }
+
+    .correction-panel-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      color: var(--theme-fg, #e2e8f0);
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .correction-hint {
+      color: var(--theme-muted, #64748b);
+      font-size: 11px;
+      font-weight: normal;
+    }
+
+    .correction-panel-close {
+      margin-left: auto;
+      background: none;
+      border: none;
+      color: var(--theme-muted, #64748b);
+      font-size: 20px;
+      cursor: pointer;
+      padding: 0 4px;
+    }
+
+    .correction-panel-close:hover {
+      color: var(--theme-fg, #fff);
+    }
+
+    .correction-state {
+      /* Container for input or result */
+    }
+
+    .correction-input-text {
+      width: 100%;
+      background: var(--theme-bg, #0f172a);
+      border: 1px solid var(--theme-button-border, #334155);
+      border-radius: 4px;
+      color: var(--theme-fg, #e2e8f0);
+      font-family: inherit;
+      font-size: 14px;
+      padding: 10px;
+      resize: vertical;
+      min-height: 60px;
+      margin-bottom: 12px;
+    }
+
+    .correction-input-text:focus {
+      outline: none;
+      border-color: var(--theme-accent, #3b82f6);
+    }
+
+    .correction-diff {
+      background: var(--theme-bg, #0f172a);
+      border: 1px solid var(--theme-button-border, #334155);
+      border-radius: 4px;
+      padding: 10px;
+      margin-bottom: 12px;
+      color: var(--theme-fg, #e2e8f0);
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .correction-diff .removed {
+      color: #ef4444;
+      text-decoration: line-through;
+    }
+
+    .correction-diff .added {
+      color: #22c55e;
+    }
+
+    .correction-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .correction-btn {
+      padding: 8px 16px;
+      border-radius: 4px;
+      border: 1px solid var(--theme-button-border, #334155);
+      background: var(--theme-button-bg, #334155);
+      color: var(--theme-fg, #e2e8f0);
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .correction-btn:hover {
+      opacity: 0.85;
+    }
+
+    .correction-btn.primary {
+      background: var(--theme-accent, #3b82f6);
+      border-color: var(--theme-accent, #3b82f6);
+      color: #fff;
+    }
+
+    .correction-btn.primary:hover {
+      opacity: 0.9;
+    }
+
+    /* Settings button */
+    .settings-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 24px;
+      background: var(--theme-button-bg, #1e293b);
+      border: 1px solid var(--theme-button-border, #334155);
+      border-radius: 6px;
+      color: var(--theme-muted, #64748b);
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.15s;
+    }
+    .settings-btn:hover {
+      opacity: 0.85;
+      color: var(--theme-fg, #e2e8f0);
+    }
+
+    /* Settings modal */
+    .settings-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    .settings-modal.visible {
+      display: flex;
+    }
+    .settings-panel {
+      background: var(--theme-header, #1e293b);
+      border: 1px solid var(--theme-button-border, #334155);
+      border-radius: 12px;
+      padding: 24px;
+      width: 480px;
+      max-width: 90vw;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    .settings-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .settings-header h2 {
+      color: var(--theme-fg, #e2e8f0);
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .settings-close {
+      background: none;
+      border: none;
+      color: var(--theme-muted, #64748b);
+      font-size: 24px;
+      cursor: pointer;
+      padding: 4px;
+    }
+    .settings-close:hover {
+      color: var(--theme-fg, #e2e8f0);
+    }
+    .settings-section {
+      margin-bottom: 24px;
+    }
+    .settings-section h3 {
+      color: var(--theme-muted, #94a3b8);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+    }
+    .color-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    .color-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .color-item label {
+      color: var(--theme-fg, #e2e8f0);
+      font-size: 13px;
+      flex: 1;
+    }
+    .color-picker {
+      width: 40px;
+      height: 32px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      padding: 0;
+      background: none;
+    }
+    .color-picker::-webkit-color-swatch-wrapper {
+      padding: 2px;
+    }
+    .color-picker::-webkit-color-swatch {
+      border: 2px solid var(--theme-button-border, #475569);
+      border-radius: 4px;
+    }
+    .preset-themes {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .preset-btn {
+      padding: 6px 12px;
+      background: var(--theme-button-bg, #334155);
+      border: 1px solid var(--theme-button-border, #475569);
+      border-radius: 6px;
+      color: var(--theme-fg, #e2e8f0);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .preset-btn:hover {
+      opacity: 0.85;
+    }
+    .preset-btn.active {
+      background: var(--theme-accent, #3b82f6);
+      border-color: var(--theme-accent, #60a5fa);
+      color: #fff;
+    }
+    .settings-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid var(--theme-button-border, #334155);
+    }
+    .btn {
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-secondary {
+      background: var(--theme-button-bg, #334155);
+      border: 1px solid var(--theme-button-border, #475569);
+      color: var(--theme-fg, #e2e8f0);
+    }
+    .btn-secondary:hover {
+      opacity: 0.85;
+    }
+    .btn-primary {
+      background: var(--theme-accent, #3b82f6);
+      border: 1px solid var(--theme-accent, #60a5fa);
+      color: white;
+    }
+    .btn-primary:hover {
+      opacity: 0.9;
+    }
+    /* Font settings */
+    .setting-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .setting-row label {
+      color: var(--theme-fg, #e2e8f0);
+      font-size: 13px;
+      width: 100px;
+      flex-shrink: 0;
+    }
+    .setting-row input[type="range"] {
+      flex: 1;
+      height: 6px;
+      -webkit-appearance: none;
+      background: var(--theme-button-border, #334155);
+      border-radius: 3px;
+      outline: none;
+    }
+    .setting-row input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      background: var(--theme-accent, #3b82f6);
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    .setting-row input[type="range"]::-webkit-slider-thumb:hover {
+      opacity: 0.9;
+    }
+    .setting-row .value-display {
+      width: 50px;
+      text-align: right;
+      color: var(--theme-muted, #94a3b8);
+      font-size: 13px;
+      font-family: monospace;
+    }
+    .correction-checking {
+      color: var(--theme-muted, #64748b);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 0;
+    }
+    .correction-checking .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--theme-button-border, #334155);
+      border-top-color: var(--theme-accent, #3b82f6);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    /* Clickable links in terminal */
+    .xterm a {
+      color: var(--theme-accent, #06b6d4);
+      text-decoration: underline;
+      cursor: pointer;
+    }
+    .xterm a:hover {
+      opacity: 0.8;
+    }
+
+    /* Image hover preview */
+    .image-preview {
+      display: none;
+      position: fixed;
+      z-index: 1500;
+      background: var(--theme-header, #1e293b);
+      border: 1px solid var(--theme-accent, #3b82f6);
+      border-radius: 8px;
+      padding: 4px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      pointer-events: none;
+    }
+    .image-preview.visible {
+      display: block;
+    }
+    .image-preview img {
+      max-width: 300px;
+      max-height: 200px;
+      object-fit: contain;
+      border-radius: 4px;
+    }
+
+    /* Image viewer modal */
+    .image-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+    .image-modal.visible {
+      display: flex;
+    }
+    .image-modal-content {
+      position: relative;
+      max-width: 90vw;
+      max-height: 90vh;
+    }
+    .image-modal-close {
+      position: absolute;
+      top: -40px;
+      right: 0;
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 32px;
+      cursor: pointer;
+      padding: 4px 12px;
+    }
+    .image-modal-close:hover {
+      color: #ef4444;
+    }
+    .image-modal-content img {
+      max-width: 90vw;
+      max-height: 85vh;
+      object-fit: contain;
+      border-radius: 4px;
+    }
+    .image-modal-info {
+      color: #94a3b8;
+      font-size: 12px;
+      margin-top: 8px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Synesthesia</h1>
+    <div class="tab-bar" id="tab-bar">
+      <button class="new-tab-btn" id="new-tab-btn" title="New session (Ctrl+Shift+T)">+</button>
+    </div>
+    <div class="header-right">
+      <button id="correction-toggle" class="correction-toggle" title="Toggle English Correction (Cmd+X)">
+        <span class="toggle-icon">Aa</span>
+        <span class="toggle-label">Correction</span>
+      </button>
+      <button id="settings-btn" class="settings-btn" title="Theme Settings">⚙</button>
+      <div class="status">
+        <div class="status-dot" id="status-dot"></div>
+        <span id="status-text">Disconnected</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Image Hover Preview -->
+  <div id="image-preview" class="image-preview">
+    <img id="image-preview-img" src="" alt="Preview">
+  </div>
+
+  <!-- Image Viewer Modal -->
+  <div id="image-modal" class="image-modal">
+    <div class="image-modal-content">
+      <button class="image-modal-close" id="image-modal-close">&times;</button>
+      <img id="image-modal-img" src="" alt="Image">
+      <div class="image-modal-info" id="image-modal-info"></div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="settings-modal">
+    <div class="settings-panel">
+      <div class="settings-header">
+        <h2>Theme Settings</h2>
+        <button class="settings-close" id="settings-close">×</button>
+      </div>
+
+      <div class="settings-section">
+        <h3>Dark Themes</h3>
+        <div class="preset-themes">
+          <button class="preset-btn" data-theme="synesthesia">Synesthesia</button>
+          <button class="preset-btn" data-theme="dracula">Dracula</button>
+          <button class="preset-btn" data-theme="tokyoNight">Tokyo Night</button>
+          <button class="preset-btn" data-theme="catppuccin">Catppuccin</button>
+          <button class="preset-btn" data-theme="rosePine">Rosé Pine</button>
+          <button class="preset-btn" data-theme="synthwave">Synthwave '84</button>
+          <button class="preset-btn" data-theme="cyberpunk">Cyberpunk</button>
+          <button class="preset-btn" data-theme="nord">Nord</button>
+          <button class="preset-btn" data-theme="gruvbox">Gruvbox</button>
+          <button class="preset-btn" data-theme="ayuDark">Ayu Dark</button>
+          <button class="preset-btn" data-theme="oneDark">One Dark</button>
+          <button class="preset-btn" data-theme="monokai">Monokai</button>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>Light Themes</h3>
+        <div class="preset-themes">
+          <button class="preset-btn" data-theme="github">GitHub</button>
+          <button class="preset-btn" data-theme="oneLight">One Light</button>
+          <button class="preset-btn" data-theme="ayuLight">Ayu Light</button>
+          <button class="preset-btn" data-theme="solarizedLight">Solarized Light</button>
+          <button class="preset-btn" data-theme="catppuccinLatte">Catppuccin Latte</button>
+          <button class="preset-btn" data-theme="rosePineDawn">Rosé Pine Dawn</button>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>Terminal Colors</h3>
+        <div class="color-grid">
+          <div class="color-item">
+            <label>Background</label>
+            <input type="color" class="color-picker" id="color-background" value="#1a1a2e">
+          </div>
+          <div class="color-item">
+            <label>Foreground</label>
+            <input type="color" class="color-picker" id="color-foreground" value="#e2e8f0">
+          </div>
+          <div class="color-item">
+            <label>Cursor</label>
+            <input type="color" class="color-picker" id="color-cursor" value="#e94560">
+          </div>
+          <div class="color-item">
+            <label>Selection</label>
+            <input type="color" class="color-picker" id="color-selection" value="#e94560">
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>ANSI Colors</h3>
+        <div class="color-grid">
+          <div class="color-item">
+            <label>Black</label>
+            <input type="color" class="color-picker" id="color-black" value="#1a1a2e">
+          </div>
+          <div class="color-item">
+            <label>Red</label>
+            <input type="color" class="color-picker" id="color-red" value="#ef4444">
+          </div>
+          <div class="color-item">
+            <label>Green</label>
+            <input type="color" class="color-picker" id="color-green" value="#22c55e">
+          </div>
+          <div class="color-item">
+            <label>Yellow</label>
+            <input type="color" class="color-picker" id="color-yellow" value="#eab308">
+          </div>
+          <div class="color-item">
+            <label>Blue</label>
+            <input type="color" class="color-picker" id="color-blue" value="#3b82f6">
+          </div>
+          <div class="color-item">
+            <label>Magenta</label>
+            <input type="color" class="color-picker" id="color-magenta" value="#a855f7">
+          </div>
+          <div class="color-item">
+            <label>Cyan</label>
+            <input type="color" class="color-picker" id="color-cyan" value="#06b6d4">
+          </div>
+          <div class="color-item">
+            <label>White</label>
+            <input type="color" class="color-picker" id="color-white" value="#e2e8f0">
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>UI Colors</h3>
+        <div class="color-grid">
+          <div class="color-item">
+            <label>Header</label>
+            <input type="color" class="color-picker" id="color-header" value="#16213e">
+          </div>
+          <div class="color-item">
+            <label>Tab Bar</label>
+            <input type="color" class="color-picker" id="color-tabbar" value="#0f1729">
+          </div>
+          <div class="color-item">
+            <label>Active Tab</label>
+            <input type="color" class="color-picker" id="color-activeTab" value="#1a1a2e">
+          </div>
+          <div class="color-item">
+            <label>Accent</label>
+            <input type="color" class="color-picker" id="color-accent" value="#e94560">
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>Syntax Highlighting</h3>
+        <div class="color-grid">
+          <div class="color-item">
+            <label>Keywords</label>
+            <input type="color" class="color-picker" id="color-keyword" value="#c084fc">
+          </div>
+          <div class="color-item">
+            <label>Strings</label>
+            <input type="color" class="color-picker" id="color-string" value="#4ade80">
+          </div>
+          <div class="color-item">
+            <label>Numbers</label>
+            <input type="color" class="color-picker" id="color-number" value="#fbbf24">
+          </div>
+          <div class="color-item">
+            <label>Commands</label>
+            <input type="color" class="color-picker" id="color-command" value="#60a5fa">
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>Font Settings</h3>
+        <div class="setting-row">
+          <label>Font Size</label>
+          <input type="range" id="font-size-slider" min="10" max="24" value="14">
+          <span class="value-display" id="font-size-value">14px</span>
+        </div>
+        <div class="setting-row">
+          <label>Line Height</label>
+          <input type="range" id="line-height-slider" min="1.0" max="2.0" step="0.1" value="1.2">
+          <span class="value-display" id="line-height-value">1.2</span>
+        </div>
+      </div>
+
+      <div class="settings-actions">
+        <button class="btn btn-secondary" id="settings-reset">Reset to Default</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="terminal-container">
+    <div id="terminal"></div>
+    <!-- Unified Correction Panel -->
+    <div id="correction-panel" class="correction-panel">
+      <div class="correction-panel-header">
+        <span>Correction Mode</span>
+        <span class="correction-hint">(Cmd+X to toggle)</span>
+        <button id="correction-panel-close" class="correction-panel-close">&times;</button>
+      </div>
+      <!-- Input state -->
+      <div id="correction-input-state" class="correction-state">
+        <textarea id="correction-input-text" class="correction-input-text"
+                  placeholder="Type here... (Shift+Enter for newline)" rows="3"></textarea>
+        <div class="correction-actions">
+          <button id="correction-check-btn" class="correction-btn primary">Check & Correct</button>
+          <button id="correction-send-btn" class="correction-btn">Send as-is</button>
+        </div>
+      </div>
+      <!-- Result state -->
+      <div id="correction-result-state" class="correction-state" style="display: none;">
+        <div class="correction-diff" id="correction-diff"></div>
+        <div class="correction-actions">
+          <button id="correction-accept-btn" class="correction-btn primary">Accept</button>
+          <button id="correction-edit-btn" class="correction-btn">Edit</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links@0.9.0/lib/xterm-addon-web-links.min.js"></script>
+  <script src="highlighter.js"></script>
+  <script src="diff.js"></script>
+  <script>
+    // Load saved font settings
+    const savedFontSettings = JSON.parse(localStorage.getItem('synesthesia-font-settings')) || {
+      fontSize: 14,
+      lineHeight: 1.2
+    };
+
+    const term = new Terminal({
+      theme: {
+        background: '#1a1a2e',
+        foreground: '#e2e8f0',
+        cursor: '#e94560',
+        cursorAccent: '#1a1a2e',
+        selection: 'rgba(233, 69, 96, 0.3)',
+        black: '#1a1a2e',
+        red: '#ef4444',
+        green: '#22c55e',
+        yellow: '#eab308',
+        blue: '#3b82f6',
+        magenta: '#a855f7',
+        cyan: '#06b6d4',
+        white: '#e2e8f0',
+        brightBlack: '#64748b',
+        brightRed: '#f87171',
+        brightGreen: '#4ade80',
+        brightYellow: '#facc15',
+        brightBlue: '#60a5fa',
+        brightMagenta: '#c084fc',
+        brightCyan: '#22d3ee',
+        brightWhite: '#f8fafc'
+      },
+      fontFamily: '"JetBrains Mono", "Fira Code", "SF Mono", Menlo, Monaco, monospace',
+      fontSize: savedFontSettings.fontSize,
+      lineHeight: savedFontSettings.lineHeight,
+      cursorBlink: true,
+      cursorStyle: 'bar'
+    });
+
+    const fitAddon = new FitAddon.FitAddon();
+    term.loadAddon(fitAddon);
+
+    // Web links addon - makes URLs clickable
+    const webLinksAddon = new WebLinksAddon.WebLinksAddon();
+    term.loadAddon(webLinksAddon);
+
+    const terminalElement = document.getElementById('terminal');
+    term.open(terminalElement);
+    fitAddon.fit();
+
+    const statusDot = document.getElementById('status-dot');
+    const statusText = document.getElementById('status-text');
+    const tabBar = document.getElementById('tab-bar');
+    const newTabBtn = document.getElementById('new-tab-btn');
+    const correctionToggle = document.getElementById('correction-toggle');
+
+    let ws;
+    let highlightEnabled = true;
+    let sessions = new Map();
+    let activeSessionId = null;
+
+    // Initialize theme early (will be properly set later)
+    let currentTheme = JSON.parse(localStorage.getItem('synesthesia-theme')) || {
+      background: '#1a1a2e', activeTab: '#1a1a2e'
+    };
+
+    // Correction feature state
+    let correctionEnabled = localStorage.getItem('synesthesia-correction-enabled') === 'true';
+    let pendingCorrection = null;
+    let inputBuffer = '';
+    let waitingForCorrection = false;
+
+    // Image cache: Array of {data, timestamp} - keeps last 100 pasted images
+    const MAX_IMAGE_CACHE = 100;
+    const imageCache = [];
+    let imageCacheCounter = 0;
+
+    // Image preview elements
+    const imagePreview = document.getElementById('image-preview');
+    const imagePreviewImg = document.getElementById('image-preview-img');
+
+    // Image modal elements
+    const imageModal = document.getElementById('image-modal');
+    const imageModalImg = document.getElementById('image-modal-img');
+    const imageModalInfo = document.getElementById('image-modal-info');
+    const imageModalClose = document.getElementById('image-modal-close');
+
+    // Show hover preview
+    function showPreview(imageNum, x, y) {
+      const image = getImageFromCache(imageNum);
+      if (image) {
+        imagePreviewImg.src = image.data;
+        // Position preview near cursor but keep on screen
+        const previewWidth = 308; // max-width + padding
+        const previewHeight = 208;
+        let left = x + 15;
+        let top = y + 15;
+
+        if (left + previewWidth > window.innerWidth) {
+          left = x - previewWidth - 15;
+        }
+        if (top + previewHeight > window.innerHeight) {
+          top = y - previewHeight - 15;
+        }
+
+        imagePreview.style.left = `${left}px`;
+        imagePreview.style.top = `${top}px`;
+        imagePreview.classList.add('visible');
+      }
+    }
+
+    // Hide hover preview
+    function hidePreview() {
+      imagePreview.classList.remove('visible');
+    }
+
+    // Add image to cache
+    function addImageToCache(dataUrl) {
+      imageCacheCounter++;
+      const entry = {
+        id: imageCacheCounter,
+        data: dataUrl,
+        timestamp: Date.now()
+      };
+      imageCache.push(entry);
+
+      // Keep only last 100 images
+      while (imageCache.length > MAX_IMAGE_CACHE) {
+        imageCache.shift();
+      }
+
+      console.log(`Cached image #${imageCacheCounter} (${imageCache.length} in cache)`);
+      return imageCacheCounter;
+    }
+
+    // Get image from cache by number (1-based, where 1 is most recent)
+    function getImageFromCache(imageNum) {
+      // imageNum 1 = most recent, 2 = second most recent, etc.
+      const index = imageCache.length - imageNum;
+      if (index >= 0 && index < imageCache.length) {
+        return imageCache[index];
+      }
+      return null;
+    }
+
+    // Show image in modal
+    function showImage(imageNum) {
+      const image = getImageFromCache(imageNum);
+      if (image) {
+        imageModalImg.src = image.data;
+        imageModalInfo.textContent = `Image #${imageNum} (cached at ${new Date(image.timestamp).toLocaleTimeString()})`;
+        imageModal.classList.add('visible');
+      } else {
+        console.log(`Image #${imageNum} not found in cache (cache has ${imageCache.length} images)`);
+      }
+    }
+
+    // Close image modal
+    imageModalClose.onclick = () => {
+      imageModal.classList.remove('visible');
+    };
+    imageModal.onclick = (e) => {
+      if (e.target === imageModal) {
+        imageModal.classList.remove('visible');
+      }
+    };
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && imageModal.classList.contains('visible')) {
+        imageModal.classList.remove('visible');
+      }
+    });
+
+    // Intercept paste events to capture images (on terminal and document)
+    function handlePaste(e) {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          const blob = item.getAsFile();
+          if (blob) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              const dataUrl = event.target.result;
+              addImageToCache(dataUrl);
+            };
+            reader.readAsDataURL(blob);
+          }
+        }
+      }
+    }
+
+    // Listen on both document and terminal element
+    document.addEventListener('paste', handlePaste, true);
+    terminalElement.addEventListener('paste', handlePaste, true);
+
+    // Also use xterm's custom key handler to detect Cmd+V / Ctrl+V
+    term.attachCustomKeyEventHandler((e) => {
+      if (e.type === 'keydown' && (e.metaKey || e.ctrlKey) && e.key === 'v') {
+        // Read clipboard and check for images
+        navigator.clipboard.read().then(items => {
+          for (const item of items) {
+            for (const type of item.types) {
+              if (type.startsWith('image/')) {
+                item.getType(type).then(blob => {
+                  const reader = new FileReader();
+                  reader.onload = (event) => {
+                    const dataUrl = event.target.result;
+                    addImageToCache(dataUrl);
+                  };
+                  reader.readAsDataURL(blob);
+                });
+              }
+            }
+          }
+        }).catch(err => {
+          console.log('Clipboard read failed:', err);
+        });
+      }
+      return true; // Allow default handling
+    });
+
+    // Track current hover state
+    let currentHoverImageNum = null;
+
+    // Register link provider for [Image #X] patterns
+    term.registerLinkProvider({
+      provideLinks: (bufferLineNumber, callback) => {
+        const line = term.buffer.active.getLine(bufferLineNumber - 1);
+        if (!line) {
+          callback(undefined);
+          return;
+        }
+
+        const text = line.translateToString();
+        const links = [];
+        const regex = /\[Image #(\d+)\]/g;
+        let match;
+
+        while ((match = regex.exec(text)) !== null) {
+          const imageNum = parseInt(match[1]);
+          links.push({
+            range: {
+              start: { x: match.index + 1, y: bufferLineNumber },
+              end: { x: match.index + match[0].length + 1, y: bufferLineNumber }
+            },
+            text: match[0],
+            activate: () => {
+              showImage(imageNum);
+            },
+            hover: (event, text) => {
+              showPreview(imageNum, event.clientX, event.clientY);
+              currentHoverImageNum = imageNum;
+            },
+            leave: () => {
+              hidePreview();
+              currentHoverImageNum = null;
+            }
+          });
+        }
+
+        callback(links.length > 0 ? links : undefined);
+      }
+    });
+
+    // Fallback: detect hover via mousemove on terminal
+    let hoverTimeout = null;
+    terminalElement.addEventListener('mousemove', (e) => {
+      // Get character position from mouse coordinates
+      const rect = terminalElement.querySelector('.xterm-screen')?.getBoundingClientRect();
+      if (!rect) return;
+
+      const cellWidth = rect.width / term.cols;
+      const cellHeight = rect.height / term.rows;
+      const col = Math.floor((e.clientX - rect.left) / cellWidth);
+      const row = Math.floor((e.clientY - rect.top) / cellHeight);
+
+      // Get the line at this row
+      const bufferRow = term.buffer.active.viewportY + row;
+      const line = term.buffer.active.getLine(bufferRow);
+      if (!line) {
+        hidePreview();
+        return;
+      }
+
+      const text = line.translateToString();
+
+      // Check if cursor is over an [Image #X] pattern
+      const regex = /\[Image #(\d+)\]/g;
+      let match;
+      let foundImage = null;
+
+      while ((match = regex.exec(text)) !== null) {
+        if (col >= match.index && col < match.index + match[0].length) {
+          foundImage = parseInt(match[1]);
+          break;
+        }
+      }
+
+      if (foundImage !== null && foundImage !== currentHoverImageNum) {
+        currentHoverImageNum = foundImage;
+        showPreview(foundImage, e.clientX, e.clientY);
+      } else if (foundImage === null && currentHoverImageNum !== null) {
+        currentHoverImageNum = null;
+        hidePreview();
+      }
+    });
+
+    terminalElement.addEventListener('mouseleave', () => {
+      hidePreview();
+      currentHoverImageNum = null;
+    });
+
+    // Handle Shift+Enter for multi-line input
+    // This must be done via attachCustomKeyEventHandler because onData()
+    // only receives raw character data without modifier key information
+    term.attachCustomKeyEventHandler((e) => {
+      if (e.type === 'keydown' && e.key === 'Enter' && e.shiftKey) {
+        e.preventDefault();
+        // In correction mode, add to buffer and let shell handle display
+        if (correctionEnabled && !pendingCorrection && !waitingForCorrection) {
+          inputBuffer += '\n';
+        }
+        // Send newline character to PTY (shell handles display)
+        if (ws && ws.readyState === WebSocket.OPEN && activeSessionId) {
+          ws.send(JSON.stringify({ type: 'input', sessionId: activeSessionId, data: '\n' }));
+        }
+        return false; // Prevent default xterm handling
+      }
+      return true; // Allow normal processing
+    });
+
+    // Unified correction panel elements
+    const correctionPanel = document.getElementById('correction-panel');
+    const correctionInputState = document.getElementById('correction-input-state');
+    const correctionResultState = document.getElementById('correction-result-state');
+    const correctionInputText = document.getElementById('correction-input-text');
+    const correctionDiff = document.getElementById('correction-diff');
+    const correctionPanelClose = document.getElementById('correction-panel-close');
+    const correctionCheckBtn = document.getElementById('correction-check-btn');
+    const correctionSendBtn = document.getElementById('correction-send-btn');
+    const correctionAcceptBtn = document.getElementById('correction-accept-btn');
+    const correctionEditBtn = document.getElementById('correction-edit-btn');
+
+    // Initialize correction toggle state
+    // Restore correction mode state on load
+    if (correctionEnabled) {
+      correctionToggle.classList.add('active');
+      // Don't auto-show popup on page load - let user toggle
+    }
+
+    function escapeHtml(text) {
+      return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // Show correction panel
+    function showCorrectionPanel() {
+      correctionPanel.classList.add('visible');
+      showInputState();
+    }
+
+    // Hide correction panel
+    function hideCorrectionPanel() {
+      correctionPanel.classList.remove('visible');
+      correctionInputText.value = '';
+      inputBuffer = '';
+      pendingCorrection = null;
+      term.focus();
+    }
+
+    // Show input state
+    function showInputState() {
+      correctionInputState.style.display = 'block';
+      correctionResultState.style.display = 'none';
+      correctionInputText.focus();
+    }
+
+    // Show result state with diff
+    function showResultState(diffHtml) {
+      correctionDiff.innerHTML = diffHtml;
+      correctionInputState.style.display = 'none';
+      correctionResultState.style.display = 'block';
+    }
+
+    // Send text to terminal (no extra line break)
+    function sendToTerminal(text) {
+      if (text.trim()) {
+        ws.send(JSON.stringify({ type: 'input', sessionId: activeSessionId, data: text }));
+      }
+      // Clear input but keep panel open
+      correctionInputText.value = '';
+      inputBuffer = '';
+      pendingCorrection = null;
+      showInputState();
+    }
+
+    // Request correction from server
+    function requestCorrection(text) {
+      if (!text.trim()) return;
+
+      inputBuffer = text;
+      waitingForCorrection = true;
+
+      // Show loading state - display input text with checking indicator
+      const checkingHtml = `<div style="margin-bottom: 8px;">${escapeHtml(text)}</div><div class="correction-checking"><div class="spinner"></div>Checking... (Esc to cancel)</div>`;
+      showResultState(checkingHtml);
+
+      ws.send(JSON.stringify({
+        type: 'correct-english',
+        sessionId: activeSessionId,
+        text: text
+      }));
+    }
+
+    // Toggle correction mode
+    correctionToggle.onclick = () => {
+      correctionEnabled = !correctionEnabled;
+      correctionToggle.classList.toggle('active', correctionEnabled);
+      localStorage.setItem('synesthesia-correction-enabled', correctionEnabled);
+
+      if (correctionEnabled) {
+        showCorrectionPanel();
+      } else {
+        hideCorrectionPanel();
+      }
+    };
+
+    // Close button - turns off correction mode
+    correctionPanelClose.onclick = () => {
+      correctionEnabled = false;
+      correctionToggle.classList.remove('active');
+      localStorage.setItem('synesthesia-correction-enabled', 'false');
+      hideCorrectionPanel();
+    };
+
+    // Check & Correct button
+    correctionCheckBtn.onclick = () => {
+      const text = correctionInputText.value;
+      if (text.trim()) {
+        requestCorrection(text);
+      }
+    };
+
+    // Send as-is button
+    correctionSendBtn.onclick = () => {
+      const text = correctionInputText.value;
+      sendToTerminal(text);
+    };
+
+    // Accept button (in result state)
+    correctionAcceptBtn.onclick = () => {
+      if (pendingCorrection) {
+        sendToTerminal(pendingCorrection.corrected);
+      }
+    };
+
+    // Edit button (in result state) - return to input state
+    correctionEditBtn.onclick = () => {
+      correctionInputText.value = inputBuffer;
+      pendingCorrection = null;
+      showInputState();
+    };
+
+    // Textarea keyboard handling (input state)
+    correctionInputText.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        const text = correctionInputText.value;
+        if (text.trim()) {
+          requestCorrection(text);
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        // Drop all text
+        correctionInputText.value = '';
+        inputBuffer = '';
+      }
+    });
+
+    // Result state keyboard handling (Enter to accept, Esc to edit/cancel)
+    document.addEventListener('keydown', (e) => {
+      // Only handle when result state is visible
+      if (!correctionPanel.classList.contains('visible')) return;
+      if (correctionResultState.style.display === 'none') return;
+
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        // Only accept if we have a correction (not during checking)
+        if (pendingCorrection && !waitingForCorrection) {
+          sendToTerminal(pendingCorrection.corrected);
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        // Cancel checking or go back to edit
+        waitingForCorrection = false;
+        correctionInputText.value = inputBuffer;
+        pendingCorrection = null;
+        showInputState();
+      }
+    });
+
+    function createTabElement(id, name) {
+      const tab = document.createElement('button');
+      tab.className = 'tab';
+      tab.dataset.sessionId = id;
+
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = name;
+      nameSpan.className = 'tab-name';
+
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'close-btn';
+      closeBtn.textContent = '×';
+      closeBtn.onclick = (e) => {
+        e.stopPropagation();
+        closeSession(id);
+      };
+
+      tab.appendChild(nameSpan);
+      tab.appendChild(closeBtn);
+
+      tab.onclick = () => switchSession(id);
+
+      // Double-click to rename
+      nameSpan.ondblclick = (e) => {
+        e.stopPropagation();
+        const newName = prompt('Rename session:', name);
+        if (newName && newName.trim()) {
+          renameSession(id, newName.trim());
+        }
+      };
+
+      tabBar.insertBefore(tab, newTabBtn);
+      return tab;
+    }
+
+    function updateTabs() {
+      document.querySelectorAll('.tab').forEach(tab => {
+        const isActive = tab.dataset.sessionId === activeSessionId;
+        tab.classList.toggle('active', isActive);
+        // Apply theme color to active tab
+        tab.style.background = isActive ? (currentTheme.activeTab || currentTheme.background) : '';
+      });
+    }
+
+    function switchSession(id) {
+      if (id === activeSessionId) return;
+      ws.send(JSON.stringify({ type: 'switch-session', sessionId: id }));
+    }
+
+    function createNewSession() {
+      const name = `Shell ${sessions.size + 1}`;
+      ws.send(JSON.stringify({ type: 'create-session', name }));
+    }
+
+    function closeSession(id) {
+      ws.send(JSON.stringify({ type: 'close-session', sessionId: id }));
+    }
+
+    function renameSession(id, name) {
+      ws.send(JSON.stringify({ type: 'rename-session', sessionId: id, name }));
+    }
+
+    // Get or create persistent client ID
+    function getClientId() {
+      let id = localStorage.getItem('synesthesia-client-id');
+      if (!id) {
+        id = 'client-' + Math.random().toString(36).substr(2, 9) + '-' + Date.now();
+        localStorage.setItem('synesthesia-client-id', id);
+      }
+      return id;
+    }
+
+    const clientId = getClientId();
+
+    function connect() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${protocol}//${window.location.host}?clientId=${encodeURIComponent(clientId)}`);
+
+      ws.onopen = () => {
+        statusDot.classList.add('connected');
+        statusText.textContent = 'Connected';
+        // Send initial terminal size after connection is established
+        setTimeout(() => {
+          fitAddon.fit();
+          sendResize();
+        }, 100);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+
+          switch (msg.type) {
+            case 'session-created':
+              sessions.set(msg.id, { id: msg.id, name: msg.name });
+              createTabElement(msg.id, msg.name);
+              break;
+
+            case 'session-switched':
+              activeSessionId = msg.id;
+              updateTabs();
+              term.clear();
+              term.focus();
+              // Send terminal size after switching sessions
+              sendResize();
+              break;
+
+            case 'session-closed': {
+              sessions.delete(msg.id);
+              const tab = document.querySelector(`.tab[data-session-id="${msg.id}"]`);
+              if (tab) tab.remove();
+              break;
+            }
+
+            case 'session-renamed': {
+              const session = sessions.get(msg.id);
+              if (session) session.name = msg.name;
+              const tab = document.querySelector(`.tab[data-session-id="${msg.id}"] .tab-name`);
+              if (tab) tab.textContent = msg.name;
+              break;
+            }
+
+            case 'clear':
+              term.clear();
+              break;
+
+            case 'output':
+              if (msg.sessionId === activeSessionId) {
+                const output = highlightEnabled
+                  ? Highlighter.highlight(msg.data)
+                  : msg.data;
+                term.write(output);
+              }
+              break;
+
+            case 'correction-result':
+              waitingForCorrection = false;
+              if (msg.sessionId === activeSessionId) {
+                if (msg.original.trim() === msg.corrected.trim()) {
+                  // No changes needed - send directly
+                  sendToTerminal(msg.original);
+                } else {
+                  // Show diff
+                  const diff = window.Diff.computeWordDiff(msg.original, msg.corrected);
+                  let html = '';
+                  for (const part of diff) {
+                    if (part.type === 'removed') {
+                      html += `<span class="removed">${escapeHtml(part.text)}</span>`;
+                    } else if (part.type === 'added') {
+                      html += `<span class="added">${escapeHtml(part.text)}</span>`;
+                    } else {
+                      html += escapeHtml(part.text);
+                    }
+                  }
+                  pendingCorrection = { original: msg.original, corrected: msg.corrected };
+                  showResultState(html);
+                }
+              }
+              break;
+
+            case 'correction-error':
+              waitingForCorrection = false;
+              if (msg.sessionId === activeSessionId) {
+                // Error - send original text
+                sendToTerminal(inputBuffer);
+              }
+              break;
+
+          }
+        } catch (e) {
+          console.error('Parse error:', e);
+        }
+      };
+
+      ws.onclose = () => {
+        statusDot.classList.remove('connected');
+        statusText.textContent = 'Disconnected';
+        term.write('\r\n\x1b[31m[Connection closed]\x1b[0m\r\n');
+        sessions.clear();
+        document.querySelectorAll('.tab').forEach(t => t.remove());
+        setTimeout(connect, 3000);
+      };
+
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+      };
+    }
+
+    // Send input to server
+    term.onData((data) => {
+      if (!ws || ws.readyState !== WebSocket.OPEN || !activeSessionId) return;
+
+      // If correction panel is visible, redirect input there
+      if (correctionEnabled && correctionPanel.classList.contains('visible')) {
+        // Don't process terminal input when correction panel is active
+        return;
+      }
+
+      // Send to server normally
+      ws.send(JSON.stringify({ type: 'input', sessionId: activeSessionId, data }));
+    });
+
+    // Handle resize
+    function sendResize() {
+      if (ws && ws.readyState === WebSocket.OPEN && activeSessionId) {
+        ws.send(JSON.stringify({
+          type: 'resize',
+          sessionId: activeSessionId,
+          cols: term.cols,
+          rows: term.rows
+        }));
+      }
+    }
+
+    window.addEventListener('resize', () => {
+      fitAddon.fit();
+      sendResize();
+    });
+
+    // New tab button
+    newTabBtn.onclick = createNewSession;
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      // Cmd+X: Toggle correction mode
+      if (e.metaKey && e.key === 'x') {
+        e.preventDefault();
+        correctionToggle.click();
+        return;
+      }
+      // Ctrl+Shift+T: New tab
+      if (e.ctrlKey && e.shiftKey && e.key === 'T') {
+        e.preventDefault();
+        createNewSession();
+      }
+      // Ctrl+Shift+W: Close tab
+      if (e.ctrlKey && e.shiftKey && e.key === 'W') {
+        e.preventDefault();
+        if (activeSessionId) closeSession(activeSessionId);
+      }
+      // Ctrl+Tab: Next tab
+      if (e.ctrlKey && e.key === 'Tab') {
+        e.preventDefault();
+        const ids = Array.from(sessions.keys());
+        const idx = ids.indexOf(activeSessionId);
+        const nextIdx = e.shiftKey
+          ? (idx - 1 + ids.length) % ids.length
+          : (idx + 1) % ids.length;
+        switchSession(ids[nextIdx]);
+      }
+    });
+
+    // ========== Theme Settings ==========
+    const settingsBtn = document.getElementById('settings-btn');
+    const settingsModal = document.getElementById('settings-modal');
+    const settingsClose = document.getElementById('settings-close');
+    const settingsReset = document.getElementById('settings-reset');
+
+    // Preset themes (dark and light)
+    const presetThemes = {
+      // ===== DARK THEMES =====
+      synesthesia: {
+        background: '#1a1a2e', foreground: '#e2e8f0', cursor: '#e94560', selection: '#e94560',
+        black: '#1a1a2e', red: '#ef4444', green: '#22c55e', yellow: '#eab308',
+        blue: '#3b82f6', magenta: '#a855f7', cyan: '#06b6d4', white: '#e2e8f0',
+        brightBlack: '#94a3b8', header: '#16213e', tabbar: '#0f1729', activeTab: '#1a1a2e', accent: '#e94560',
+        keyword: '#c084fc', string: '#4ade80', number: '#fbbf24', command: '#60a5fa'
+      },
+      dracula: {
+        background: '#282a36', foreground: '#f8f8f2', cursor: '#f8f8f2', selection: '#44475a',
+        black: '#21222c', red: '#ff5555', green: '#50fa7b', yellow: '#f1fa8c',
+        blue: '#bd93f9', magenta: '#ff79c6', cyan: '#8be9fd', white: '#f8f8f2',
+        brightBlack: '#6272a4', header: '#1e1f29', tabbar: '#191a21', activeTab: '#282a36', accent: '#bd93f9',
+        keyword: '#ff79c6', string: '#f1fa8c', number: '#bd93f9', command: '#8be9fd'
+      },
+      tokyoNight: {
+        background: '#1a1b26', foreground: '#c0caf5', cursor: '#c0caf5', selection: '#33467c',
+        black: '#15161e', red: '#f7768e', green: '#9ece6a', yellow: '#e0af68',
+        blue: '#7aa2f7', magenta: '#bb9af7', cyan: '#7dcfff', white: '#c0caf5',
+        brightBlack: '#565f89', header: '#13141c', tabbar: '#0f1016', activeTab: '#1a1b26', accent: '#7aa2f7',
+        keyword: '#bb9af7', string: '#9ece6a', number: '#ff9e64', command: '#7aa2f7'
+      },
+      catppuccin: {
+        background: '#1e1e2e', foreground: '#cdd6f4', cursor: '#f5e0dc', selection: '#45475a',
+        black: '#45475a', red: '#f38ba8', green: '#a6e3a1', yellow: '#f9e2af',
+        blue: '#89b4fa', magenta: '#cba6f7', cyan: '#94e2d5', white: '#bac2de',
+        brightBlack: '#6c7086', header: '#181825', tabbar: '#11111b', activeTab: '#1e1e2e', accent: '#cba6f7',
+        keyword: '#cba6f7', string: '#a6e3a1', number: '#fab387', command: '#89b4fa'
+      },
+      rosePine: {
+        background: '#191724', foreground: '#e0def4', cursor: '#ebbcba', selection: '#403d52',
+        black: '#26233a', red: '#eb6f92', green: '#9ccfd8', yellow: '#f6c177',
+        blue: '#31748f', magenta: '#c4a7e7', cyan: '#9ccfd8', white: '#e0def4',
+        brightBlack: '#6e6a86', header: '#1f1d2e', tabbar: '#191724', activeTab: '#26233a', accent: '#ebbcba',
+        keyword: '#c4a7e7', string: '#f6c177', number: '#ebbcba', command: '#9ccfd8'
+      },
+      synthwave: {
+        background: '#2a2139', foreground: '#f0eff1', cursor: '#ff7edb', selection: '#463465',
+        black: '#241b2f', red: '#fe4450', green: '#72f1b8', yellow: '#fede5d',
+        blue: '#36f9f6', magenta: '#ff7edb', cyan: '#36f9f6', white: '#f0eff1',
+        brightBlack: '#848bbd', header: '#1e1729', tabbar: '#171320', activeTab: '#2a2139', accent: '#ff7edb',
+        keyword: '#ff7edb', string: '#72f1b8', number: '#f97e72', command: '#36f9f6'
+      },
+      cyberpunk: {
+        background: '#0d0221', foreground: '#0abdc6', cursor: '#ea00d9', selection: '#711c91',
+        black: '#091833', red: '#ff003c', green: '#00ff9f', yellow: '#ffd700',
+        blue: '#0abdc6', magenta: '#ea00d9', cyan: '#00ffc8', white: '#d7d7d5',
+        brightBlack: '#708090', header: '#190535', tabbar: '#0d0221', activeTab: '#1a0a3e', accent: '#ea00d9',
+        keyword: '#ea00d9', string: '#00ff9f', number: '#ffd700', command: '#0abdc6'
+      },
+      nord: {
+        background: '#2e3440', foreground: '#d8dee9', cursor: '#d8dee9', selection: '#434c5e',
+        black: '#3b4252', red: '#bf616a', green: '#a3be8c', yellow: '#ebcb8b',
+        blue: '#81a1c1', magenta: '#b48ead', cyan: '#88c0d0', white: '#e5e9f0',
+        brightBlack: '#4c566a', header: '#242933', tabbar: '#1d222b', activeTab: '#2e3440', accent: '#88c0d0',
+        keyword: '#81a1c1', string: '#a3be8c', number: '#b48ead', command: '#88c0d0'
+      },
+      gruvbox: {
+        background: '#282828', foreground: '#ebdbb2', cursor: '#ebdbb2', selection: '#504945',
+        black: '#282828', red: '#fb4934', green: '#b8bb26', yellow: '#fabd2f',
+        blue: '#83a598', magenta: '#d3869b', cyan: '#8ec07c', white: '#ebdbb2',
+        brightBlack: '#928374', header: '#1d2021', tabbar: '#171a1a', activeTab: '#282828', accent: '#fe8019',
+        keyword: '#fb4934', string: '#b8bb26', number: '#d3869b', command: '#83a598'
+      },
+      ayuDark: {
+        background: '#0b0e14', foreground: '#bfbdb6', cursor: '#e6b450', selection: '#273747',
+        black: '#0b0e14', red: '#f07178', green: '#aad94c', yellow: '#e6b450',
+        blue: '#59c2ff', magenta: '#d2a6ff', cyan: '#95e6cb', white: '#bfbdb6',
+        brightBlack: '#6c7380', header: '#0d1017', tabbar: '#07090d', activeTab: '#0b0e14', accent: '#e6b450',
+        keyword: '#ff8f40', string: '#aad94c', number: '#d2a6ff', command: '#59c2ff'
+      },
+      oneDark: {
+        background: '#282c34', foreground: '#abb2bf', cursor: '#528bff', selection: '#3e4451',
+        black: '#282c34', red: '#e06c75', green: '#98c379', yellow: '#e5c07b',
+        blue: '#61afef', magenta: '#c678dd', cyan: '#56b6c2', white: '#abb2bf',
+        brightBlack: '#5c6370', header: '#21252b', tabbar: '#1b1e24', activeTab: '#282c34', accent: '#61afef',
+        keyword: '#c678dd', string: '#98c379', number: '#d19a66', command: '#61afef'
+      },
+      monokai: {
+        background: '#272822', foreground: '#f8f8f2', cursor: '#f8f8f0', selection: '#49483e',
+        black: '#272822', red: '#f92672', green: '#a6e22e', yellow: '#f4bf75',
+        blue: '#66d9ef', magenta: '#ae81ff', cyan: '#a1efe4', white: '#f8f8f2',
+        brightBlack: '#75715e', header: '#1e1f1c', tabbar: '#171814', activeTab: '#272822', accent: '#f92672',
+        keyword: '#f92672', string: '#e6db74', number: '#ae81ff', command: '#66d9ef'
+      },
+      // ===== LIGHT THEMES =====
+      ayuLight: {
+        background: '#fafafa', foreground: '#5c6166', cursor: '#ff9940', selection: '#035bd6',
+        black: '#1a1a1a', red: '#f07171', green: '#86b300', yellow: '#f2ae49',
+        blue: '#399ee6', magenta: '#a37acc', cyan: '#4cbf99', white: '#fafafa',
+        brightBlack: '#8a9199', header: '#f0f0f0', tabbar: '#e8e8e8', activeTab: '#fafafa', accent: '#ff9940',
+        keyword: '#fa8d3e', string: '#86b300', number: '#a37acc', command: '#399ee6'
+      },
+      oneLight: {
+        background: '#fafafa', foreground: '#383a42', cursor: '#526fff', selection: '#e5e5e6',
+        black: '#383a42', red: '#e45649', green: '#50a14f', yellow: '#c18401',
+        blue: '#4078f2', magenta: '#a626a4', cyan: '#0184bc', white: '#fafafa',
+        brightBlack: '#a0a1a7', header: '#f0f0f0', tabbar: '#e5e5e5', activeTab: '#fafafa', accent: '#4078f2',
+        keyword: '#a626a4', string: '#50a14f', number: '#986801', command: '#4078f2'
+      },
+      github: {
+        background: '#ffffff', foreground: '#24292f', cursor: '#044289', selection: '#0969da',
+        black: '#24292f', red: '#cf222e', green: '#116329', yellow: '#9a6700',
+        blue: '#0969da', magenta: '#8250df', cyan: '#1b7c83', white: '#ffffff',
+        brightBlack: '#6e7781', header: '#f6f8fa', tabbar: '#eaeef2', activeTab: '#ffffff', accent: '#0969da',
+        keyword: '#cf222e', string: '#0a3069', number: '#0550ae', command: '#0969da'
+      },
+      solarizedLight: {
+        background: '#fdf6e3', foreground: '#657b83', cursor: '#586e75', selection: '#eee8d5',
+        black: '#073642', red: '#dc322f', green: '#859900', yellow: '#b58900',
+        blue: '#268bd2', magenta: '#d33682', cyan: '#2aa198', white: '#fdf6e3',
+        brightBlack: '#93a1a1', header: '#eee8d5', tabbar: '#e4ddc8', activeTab: '#fdf6e3', accent: '#268bd2',
+        keyword: '#859900', string: '#2aa198', number: '#d33682', command: '#268bd2'
+      },
+      catppuccinLatte: {
+        background: '#eff1f5', foreground: '#4c4f69', cursor: '#dc8a78', selection: '#acb0be',
+        black: '#5c5f77', red: '#d20f39', green: '#40a02b', yellow: '#df8e1d',
+        blue: '#1e66f5', magenta: '#8839ef', cyan: '#179299', white: '#eff1f5',
+        brightBlack: '#9ca0b0', header: '#e6e9ef', tabbar: '#dce0e8', activeTab: '#eff1f5', accent: '#8839ef',
+        keyword: '#8839ef', string: '#40a02b', number: '#fe640b', command: '#1e66f5'
+      },
+      rosePineDawn: {
+        background: '#faf4ed', foreground: '#575279', cursor: '#d7827e', selection: '#dfdad9',
+        black: '#575279', red: '#b4637a', green: '#286983', yellow: '#ea9d34',
+        blue: '#56949f', magenta: '#907aa9', cyan: '#56949f', white: '#faf4ed',
+        brightBlack: '#9893a5', header: '#fffaf3', tabbar: '#f2e9e1', activeTab: '#faf4ed', accent: '#d7827e',
+        keyword: '#907aa9', string: '#ea9d34', number: '#d7827e', command: '#56949f'
+      }
+    };
+
+    currentTheme = JSON.parse(localStorage.getItem('synesthesia-theme')) || { ...presetThemes.synesthesia };
+
+    // Color picker elements
+    const colorPickers = {
+      background: document.getElementById('color-background'),
+      foreground: document.getElementById('color-foreground'),
+      cursor: document.getElementById('color-cursor'),
+      selection: document.getElementById('color-selection'),
+      black: document.getElementById('color-black'),
+      red: document.getElementById('color-red'),
+      green: document.getElementById('color-green'),
+      yellow: document.getElementById('color-yellow'),
+      blue: document.getElementById('color-blue'),
+      magenta: document.getElementById('color-magenta'),
+      cyan: document.getElementById('color-cyan'),
+      white: document.getElementById('color-white'),
+      header: document.getElementById('color-header'),
+      tabbar: document.getElementById('color-tabbar'),
+      activeTab: document.getElementById('color-activeTab'),
+      accent: document.getElementById('color-accent'),
+      keyword: document.getElementById('color-keyword'),
+      string: document.getElementById('color-string'),
+      number: document.getElementById('color-number'),
+      command: document.getElementById('color-command')
+    };
+
+    function loadThemeToUI(theme) {
+      for (const [key, picker] of Object.entries(colorPickers)) {
+        if (picker && theme[key]) {
+          picker.value = theme[key];
+        }
+      }
+      // Update preset button active state
+      document.querySelectorAll('.preset-btn').forEach(btn => {
+        const presetName = btn.dataset.theme;
+        const preset = presetThemes[presetName];
+        const isMatch = preset && Object.keys(preset).every(k => preset[k] === theme[k]);
+        btn.classList.toggle('active', isMatch);
+      });
+    }
+
+    function getThemeFromUI() {
+      const theme = {};
+      for (const [key, picker] of Object.entries(colorPickers)) {
+        if (picker) {
+          theme[key] = picker.value;
+        }
+      }
+      return theme;
+    }
+
+    function applyTheme(theme) {
+      // Apply to xterm
+      term.options.theme = {
+        background: theme.background,
+        foreground: theme.foreground,
+        cursor: theme.cursor,
+        cursorAccent: theme.background,
+        selection: theme.selection + '4d', // Add alpha
+        black: theme.black,
+        red: theme.red,
+        green: theme.green,
+        yellow: theme.yellow,
+        blue: theme.blue,
+        magenta: theme.magenta,
+        cyan: theme.cyan,
+        white: theme.white,
+        brightBlack: theme.brightBlack || '#6b7280', // Grey color for dim text
+        brightRed: theme.red,
+        brightGreen: theme.green,
+        brightYellow: theme.yellow,
+        brightBlue: theme.blue,
+        brightMagenta: theme.magenta,
+        brightCyan: theme.cyan,
+        brightWhite: theme.white
+      };
+
+      // Apply to page background
+      document.body.style.background = theme.background;
+      document.getElementById('terminal-container').style.background = theme.background;
+
+      // Apply UI colors
+      const header = document.querySelector('header');
+      const title = document.querySelector('header h1');
+
+      if (header) {
+        header.style.background = theme.header || theme.background;
+        header.style.borderColor = theme.tabbar || theme.background;
+      }
+      if (title) {
+        title.style.color = theme.accent || theme.cursor;
+      }
+
+      // Detect if light theme (background is light)
+      const isLight = isLightColor(theme.background);
+
+      // Calculate UI colors based on theme
+      const buttonBg = isLight ? darken(theme.background, 0.08) : lighten(theme.background, 0.15);
+      const buttonBorder = isLight ? darken(theme.background, 0.15) : lighten(theme.background, 0.25);
+      const buttonText = isLight ? darken(theme.foreground, 0.2) : theme.foreground;
+      const mutedText = theme.brightBlack || (isLight ? '#6b7280' : '#94a3b8');
+
+      // Update CSS variables for dynamic elements
+      document.documentElement.style.setProperty('--theme-bg', theme.background);
+      document.documentElement.style.setProperty('--theme-fg', theme.foreground);
+      document.documentElement.style.setProperty('--theme-header', theme.header || theme.background);
+      document.documentElement.style.setProperty('--theme-tabbar', theme.tabbar || theme.background);
+      document.documentElement.style.setProperty('--theme-active-tab', theme.activeTab || theme.background);
+      document.documentElement.style.setProperty('--theme-accent', theme.accent || theme.cursor);
+      document.documentElement.style.setProperty('--theme-button-bg', buttonBg);
+      document.documentElement.style.setProperty('--theme-button-border', buttonBorder);
+      document.documentElement.style.setProperty('--theme-button-text', buttonText);
+      document.documentElement.style.setProperty('--theme-muted', mutedText);
+
+      // Update active tab colors
+      document.querySelectorAll('.tab.active').forEach(tab => {
+        tab.style.background = theme.activeTab || theme.background;
+        tab.style.color = theme.foreground;
+      });
+
+      // Update all tabs text color
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.style.color = tab.classList.contains('active') ? theme.foreground : mutedText;
+      });
+
+      // Update buttons
+      const correctionToggle = document.getElementById('correction-toggle');
+      const settingsBtn = document.getElementById('settings-btn');
+      const newTabBtn = document.getElementById('new-tab-btn');
+
+      if (correctionToggle) {
+        correctionToggle.style.background = buttonBg;
+        correctionToggle.style.borderColor = buttonBorder;
+        correctionToggle.style.color = correctionToggle.classList.contains('active') ? '#22c55e' : mutedText;
+      }
+      if (settingsBtn) {
+        settingsBtn.style.background = buttonBg;
+        settingsBtn.style.borderColor = buttonBorder;
+        settingsBtn.style.color = mutedText;
+      }
+      if (newTabBtn) {
+        newTabBtn.style.background = 'transparent';
+        newTabBtn.style.borderColor = buttonBorder;
+        newTabBtn.style.color = mutedText;
+      }
+
+      // Update correction panel
+      const correctionPanel = document.getElementById('correction-panel');
+      if (correctionPanel) {
+        correctionPanel.style.background = theme.header || buttonBg;
+        correctionPanel.style.borderColor = theme.accent || theme.blue;
+      }
+
+      // Update highlighter colors
+      if (window.Highlighter && window.Highlighter.setColors) {
+        window.Highlighter.setColors({
+          keyword: theme.keyword,
+          string: theme.string,
+          number: theme.number,
+          command: theme.command
+        });
+      }
+
+      // Save to localStorage
+      localStorage.setItem('synesthesia-theme', JSON.stringify(theme));
+      currentTheme = theme;
+    }
+
+    // Helper: check if color is light
+    function isLightColor(color) {
+      const hex = color.replace('#', '');
+      const r = parseInt(hex.substr(0, 2), 16);
+      const g = parseInt(hex.substr(2, 2), 16);
+      const b = parseInt(hex.substr(4, 2), 16);
+      const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      return luminance > 0.5;
+    }
+
+    // Helper: darken color
+    function darken(color, amount) {
+      const hex = color.replace('#', '');
+      const r = Math.max(0, parseInt(hex.substr(0, 2), 16) - 255 * amount);
+      const g = Math.max(0, parseInt(hex.substr(2, 2), 16) - 255 * amount);
+      const b = Math.max(0, parseInt(hex.substr(4, 2), 16) - 255 * amount);
+      return `#${Math.round(r).toString(16).padStart(2, '0')}${Math.round(g).toString(16).padStart(2, '0')}${Math.round(b).toString(16).padStart(2, '0')}`;
+    }
+
+    // Helper: lighten color
+    function lighten(color, amount) {
+      const hex = color.replace('#', '');
+      const r = Math.min(255, parseInt(hex.substr(0, 2), 16) + 255 * amount);
+      const g = Math.min(255, parseInt(hex.substr(2, 2), 16) + 255 * amount);
+      const b = Math.min(255, parseInt(hex.substr(4, 2), 16) + 255 * amount);
+      return `#${Math.round(r).toString(16).padStart(2, '0')}${Math.round(g).toString(16).padStart(2, '0')}${Math.round(b).toString(16).padStart(2, '0')}`;
+    }
+
+    // Settings modal handlers
+    settingsBtn.onclick = () => {
+      loadThemeToUI(currentTheme);
+      loadFontSettingsToUI();
+      settingsModal.classList.add('visible');
+    };
+
+    settingsClose.onclick = () => {
+      settingsModal.classList.remove('visible');
+      term.focus();
+    };
+
+    settingsModal.onclick = (e) => {
+      if (e.target === settingsModal) {
+        settingsModal.classList.remove('visible');
+        term.focus();
+      }
+    };
+
+    settingsReset.onclick = () => {
+      loadThemeToUI(presetThemes.synesthesia);
+      applyTheme(presetThemes.synesthesia);
+      // Reset font settings
+      fontSizeSlider.value = 14;
+      fontSizeValue.textContent = '14px';
+      lineHeightSlider.value = 1.2;
+      lineHeightValue.textContent = '1.2';
+      applyFontSettings(14, 1.2);
+    };
+
+    // Preset theme buttons - apply immediately
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.onclick = () => {
+        const themeName = btn.dataset.theme;
+        if (presetThemes[themeName]) {
+          loadThemeToUI(presetThemes[themeName]);
+          applyTheme(presetThemes[themeName]);
+          document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+        }
+      };
+    });
+
+    // Live preview on color change
+    for (const picker of Object.values(colorPickers)) {
+      if (picker) {
+        picker.addEventListener('input', () => {
+          const theme = getThemeFromUI();
+          applyTheme(theme);
+        });
+      }
+    }
+
+    // Font settings
+    const fontSizeSlider = document.getElementById('font-size-slider');
+    const fontSizeValue = document.getElementById('font-size-value');
+    const lineHeightSlider = document.getElementById('line-height-slider');
+    const lineHeightValue = document.getElementById('line-height-value');
+
+    function applyFontSettings(fontSize, lineHeight) {
+      term.options.fontSize = fontSize;
+      term.options.lineHeight = lineHeight;
+      fitAddon.fit();
+      localStorage.setItem('synesthesia-font-settings', JSON.stringify({ fontSize, lineHeight }));
+    }
+
+    function loadFontSettingsToUI() {
+      const settings = JSON.parse(localStorage.getItem('synesthesia-font-settings')) || { fontSize: 14, lineHeight: 1.2 };
+      fontSizeSlider.value = settings.fontSize;
+      fontSizeValue.textContent = settings.fontSize + 'px';
+      lineHeightSlider.value = settings.lineHeight;
+      lineHeightValue.textContent = settings.lineHeight.toFixed(1);
+    }
+
+    fontSizeSlider.addEventListener('input', () => {
+      const size = parseInt(fontSizeSlider.value);
+      fontSizeValue.textContent = size + 'px';
+      applyFontSettings(size, parseFloat(lineHeightSlider.value));
+    });
+
+    lineHeightSlider.addEventListener('input', () => {
+      const height = parseFloat(lineHeightSlider.value);
+      lineHeightValue.textContent = height.toFixed(1);
+      applyFontSettings(parseInt(fontSizeSlider.value), height);
+    });
+
+    // Apply saved theme on load
+    applyTheme(currentTheme);
+
+    // Start connection
+    connect();
+    term.focus();
+  </script>
+</body>
+</html>
