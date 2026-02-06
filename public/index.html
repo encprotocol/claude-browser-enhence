@@ -258,6 +258,31 @@
       border-top: 1px solid rgba(255, 255, 255, 0.1);
     }
 
+    .correction-result-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .correction-copy-btn {
+      background: none;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+      color: var(--theme-muted, #64748b);
+      font-family: inherit;
+      font-size: 11px;
+      padding: 2px 8px;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .correction-copy-btn:hover {
+      color: var(--theme-fg, #e2e8f0);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
     .correction-result-hint {
       color: var(--theme-muted, #64748b);
       font-size: 11px;
@@ -768,7 +793,10 @@
       <!-- Result state -->
       <div id="correction-result-state" class="correction-state" style="display: none;">
         <div class="correction-diff" id="correction-diff"></div>
-        <div class="correction-result-hint">Enter = accept corrected · Esc = send original</div>
+        <div class="correction-result-actions">
+          <span class="correction-result-hint">Enter = accept corrected · Esc = send original</span>
+          <button id="correction-copy-btn" class="correction-copy-btn">Copy (⌘C)</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1169,6 +1197,17 @@
     const correctionResultState = document.getElementById('correction-result-state');
     const correctionInputText = document.getElementById('correction-input-text');
     const correctionDiff = document.getElementById('correction-diff');
+    const correctionCopyBtn = document.getElementById('correction-copy-btn');
+
+    function copyCorrectedText() {
+      if (!pendingCorrection) return;
+      navigator.clipboard.writeText(pendingCorrection.corrected).then(() => {
+        correctionCopyBtn.textContent = 'Copied!';
+        setTimeout(() => { correctionCopyBtn.textContent = 'Copy (⌘C)'; }, 1500);
+      });
+    }
+
+    correctionCopyBtn.addEventListener('click', copyCorrectedText);
 
     // Initialize correction toggle state
     // Restore correction mode state on load
@@ -1284,7 +1323,10 @@
       if (!correctionPanel.classList.contains('visible')) return;
       if (correctionResultState.style.display === 'none') return;
 
-      if (e.key === 'Enter') {
+      if (e.key === 'c' && e.metaKey && pendingCorrection && !waitingForCorrection) {
+        e.preventDefault();
+        copyCorrectedText();
+      } else if (e.key === 'Enter') {
         e.preventDefault();
         // Only accept if we have a correction (not during checking)
         if (pendingCorrection && !waitingForCorrection) {
