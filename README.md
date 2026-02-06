@@ -13,6 +13,13 @@ A browser-based terminal emulator with automatic syntax highlighting for termina
   - Timestamps, function calls, backtick-wrapped code
 - **Multiple shell sessions** - Tabbed interface to manage multiple concurrent shells
 - **Session persistence** - Sessions survive browser reconnects (1-hour timeout)
+- **File browser** - VS Code-style sidebar (`Cmd+B`) with directory tree, file preview, and live file watching:
+  - **Syntax highlighting** - Code files are highlighted using highlight.js with colors that adapt to the active theme
+  - **Image preview** - PNG, JPG, GIF, SVG, WebP, ICO, and BMP files display inline
+  - **PDF preview** - PDF files render in an embedded viewer
+  - **Live updates** - Previewed files auto-refresh when modified on disk
+  - **Resizable panel** - Drag the left edge to resize (up to 85% of viewport)
+  - **Persistent state** - Toggling the sidebar preserves the open preview and file watcher
 - **English correction** - Toggle correction mode (`Cmd+X`) to type in a dedicated panel, check grammar/spelling via Claude AI (Haiku), review word-level diffs, then accept or edit before sending to the terminal
 - **Theme support** - 18 built-in themes (Synesthesia, Dracula, Tokyo Night, Catppuccin, Nord, Gruvbox, Monokai, and more) plus full color customization via settings panel
 - **Clickable links** - URLs in terminal output are clickable and open in a new tab
@@ -51,11 +58,12 @@ npm test
 ## Project Structure
 
 ```
-├── server.js              # Express + WebSocket server, PTY session management
+├── server.js              # Express + WebSocket server, PTY session management, file API
 ├── public/
 │   ├── index.html         # Terminal UI (xterm.js, tabs, themes, correction panel)
 │   ├── highlighter.js     # Auto-detecting keyword colorizer (ANSI patterns)
-│   └── diff.js            # Word-level diff (LCS) for correction display
+│   ├── diff.js            # Word-level diff (LCS) for correction display
+│   └── filebrowser.js     # File browser sidebar (directory tree, viewer, image/PDF preview)
 ├── __tests__/
 │   ├── highlighter.test.js
 │   ├── diff.test.js
@@ -68,6 +76,7 @@ npm test
 
 | Shortcut | Action |
 |----------|--------|
+| `Cmd+B` | Toggle file browser sidebar |
 | `Cmd+X` | Toggle English correction mode |
 | `Shift+Enter` | Send newline without executing |
 | `Ctrl+Shift+T` | New tab |
