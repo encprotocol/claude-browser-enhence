@@ -377,7 +377,7 @@ wss.on('connection', (ws, req) => {
             ).trim();
             if (result) cwd = result;
           } catch {}
-          sendMessage('cwd-result', { cwd });
+          sendMessage('cwd-result', { cwd, home: process.env.HOME || '/tmp' });
           break;
         }
 

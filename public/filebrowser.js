@@ -4,8 +4,9 @@
  */
 window.FileBrowser = (function () {
   let sendMessage = null;
-  let panelEl, treeEl, pathEl, viewerPanelEl, viewerContentEl, viewerHeaderNameEl, viewerLiveEl, sidebarEl;
+  let panelEl, treeEl, pathEl, pathDisplayEl, pathInputEl, viewerPanelEl, viewerContentEl, viewerHeaderNameEl, viewerLiveEl, sidebarEl;
   let currentRoot = '';
+  let homeDir = '';
   let expandedDirs = new Set();
   let currentSessionId = null;
   let showHidden = false;
@@ -64,6 +65,8 @@ window.FileBrowser = (function () {
     panelEl = document.getElementById('file-browser');
     treeEl = document.getElementById('file-browser-tree');
     pathEl = document.getElementById('file-browser-path');
+    pathDisplayEl = document.getElementById('file-browser-path-display');
+    pathInputEl = document.getElementById('file-browser-path-input');
     viewerPanelEl = document.getElementById('file-viewer-panel');
     viewerContentEl = document.getElementById('file-viewer-content');
     viewerHeaderNameEl = document.getElementById('file-viewer-name');
@@ -98,6 +101,38 @@ window.FileBrowser = (function () {
         if (linked && currentSessionId) requestCwd(currentSessionId);
       });
     }
+
+    // Up button
+    document.getElementById('file-browser-up').addEventListener('click', () => {
+      if (!currentRoot || currentRoot === homeDir) return;
+      const parent = currentRoot.replace(/\/[^/]+$/, '') || '/';
+      if (homeDir && !parent.startsWith(homeDir)) return;
+      navigateToDir(parent);
+    });
+
+    // Editable path bar
+    pathEl.addEventListener('click', (e) => {
+      if (e.target === pathInputEl) return;
+      pathDisplayEl.style.display = 'none';
+      pathInputEl.style.display = '';
+      pathInputEl.value = currentRoot;
+      pathInputEl.focus();
+      pathInputEl.select();
+    });
+    pathInputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const val = pathInputEl.value.trim();
+        if (val) navigateToDir(val);
+        exitPathEdit();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        exitPathEdit();
+      }
+    });
+    pathInputEl.addEventListener('blur', () => {
+      exitPathEdit();
+    });
 
     // Resize handle
     initResize();
@@ -185,11 +220,29 @@ window.FileBrowser = (function () {
     }
   }
 
+  let previousRoot = '';
+
+  function navigateToDir(dirPath) {
+    previousRoot = currentRoot;
+    currentRoot = dirPath;
+    if (pathDisplayEl) pathDisplayEl.textContent = currentRoot;
+    expandedDirs.clear();
+    expandedDirs.add(currentRoot);
+    dirCache.clear();
+    requestDirectory(currentRoot);
+  }
+
+  function exitPathEdit() {
+    if (pathInputEl) pathInputEl.style.display = 'none';
+    if (pathDisplayEl) pathDisplayEl.style.display = '';
+  }
+
   function handleCwdResult(data) {
     // If cwd hasn't changed, skip full reset (preserves expanded dirs on polls)
     if (data.cwd === currentRoot && dirCache.size > 0) return;
+    if (!homeDir && data.home) homeDir = data.home;
     currentRoot = data.cwd;
-    if (pathEl) pathEl.textContent = currentRoot;
+    if (pathDisplayEl) pathDisplayEl.textContent = currentRoot;
     expandedDirs.clear();
     expandedDirs.add(currentRoot);
     dirCache.clear();
@@ -206,6 +259,11 @@ window.FileBrowser = (function () {
     if (data.error) {
       if (data.path === currentRoot) {
         treeEl.innerHTML = `<div class="file-browser-empty">${escapeHtml(data.error)}</div>`;
+        // Revert to previous root if navigation failed
+        if (previousRoot && previousRoot !== currentRoot) {
+          currentRoot = previousRoot;
+          if (pathDisplayEl) pathDisplayEl.textContent = currentRoot;
+        }
       }
       return;
     }
@@ -290,6 +348,9 @@ window.FileBrowser = (function () {
               renderTree();
             }
           }
+        });
+        row.addEventListener('dblclick', () => {
+          navigateToDir(entry.path);
         });
         container.appendChild(row);
         if (isExpanded) {
@@ -418,7 +479,7 @@ window.FileBrowser = (function () {
     currentRoot = s.currentRoot;
     expandedDirs = new Set(s.expandedDirs);
     dirCache = new Map(s.dirCache);
-    if (pathEl) pathEl.textContent = currentRoot;
+    if (pathDisplayEl) pathDisplayEl.textContent = currentRoot;
     renderTree();
     if (treeEl) treeEl.scrollTop = s.scrollTop;
     return true;

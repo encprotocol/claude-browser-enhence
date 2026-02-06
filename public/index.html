@@ -689,6 +689,22 @@
       text-overflow: ellipsis;
       border-bottom: 1px solid var(--theme-button-border, #334155);
       flex-shrink: 0;
+      cursor: pointer;
+    }
+    .file-browser-path:hover {
+      color: var(--theme-fg, #e2e8f0);
+    }
+    .file-browser-path-input {
+      width: 100%;
+      background: transparent;
+      border: 1px solid var(--theme-accent, #e94560);
+      border-radius: 3px;
+      color: var(--theme-fg, #e2e8f0);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      padding: 2px 6px;
+      outline: none;
+      box-sizing: border-box;
     }
     .file-browser-tree {
       flex: 1;
@@ -1126,12 +1142,16 @@
       <div id="file-browser" class="file-browser hidden">
         <div class="file-browser-header">
           <span class="fb-title">Explorer</span>
+          <button id="file-browser-up" title="Go to parent directory">↑</button>
           <button id="file-browser-link" title="Link to active tab" style="opacity:1">🔗</button>
           <button id="file-browser-toggle-hidden" title="Toggle hidden files" style="opacity:0.5">👁</button>
           <button id="file-browser-refresh" title="Refresh">↻</button>
           <button id="file-browser-close" title="Close">✕</button>
         </div>
-        <div id="file-browser-path" class="file-browser-path">~</div>
+        <div id="file-browser-path" class="file-browser-path">
+          <span id="file-browser-path-display">~</span>
+          <input id="file-browser-path-input" class="file-browser-path-input" type="text" style="display:none">
+        </div>
         <div id="file-browser-tree" class="file-browser-tree"></div>
       </div>
     </div>
