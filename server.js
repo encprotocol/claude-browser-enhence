@@ -232,7 +232,7 @@ wss.on('connection', (ws, req) => {
 
         case 'correct-english': {
           const { text, sessionId } = msg;
-          const prompt = `Fix grammar and improve this English text. Return ONLY the corrected text, nothing else:\n\n${text}`;
+          const prompt = `Fix grammar and improve this English text. Rules: Do NOT capitalize the first letter if the original doesn't. Do NOT add trailing punctuation (period, comma, etc.) if the original doesn't have it. Only fix actual grammar and spelling errors. Return ONLY the corrected text, nothing else:\n\n${text}`;
 
           // Use Haiku model for fast corrections
           const claude = spawn('claude', ['-p', prompt, '--model', 'haiku'], {
