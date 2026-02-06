@@ -843,6 +843,85 @@
       color: var(--theme-fg, #e2e8f0);
       background: var(--theme-button-bg, #1e293b);
     }
+    .fv-render-toggle.hidden { display: none; }
+    .fv-render-toggle.active {
+      color: var(--theme-accent, #e94560);
+      background: rgba(233, 69, 96, 0.15);
+    }
+    .file-viewer-content.rendered {
+      white-space: normal;
+      line-height: 1.6;
+      padding: 12px 16px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+    }
+    .file-viewer-content.rendered h1,
+    .file-viewer-content.rendered h2,
+    .file-viewer-content.rendered h3,
+    .file-viewer-content.rendered h4,
+    .file-viewer-content.rendered h5,
+    .file-viewer-content.rendered h6 {
+      color: var(--theme-fg, #e2e8f0);
+      margin: 1em 0 0.5em;
+      line-height: 1.3;
+    }
+    .file-viewer-content.rendered h1 { font-size: 1.8em; border-bottom: 1px solid var(--theme-border, #334155); padding-bottom: 0.3em; }
+    .file-viewer-content.rendered h2 { font-size: 1.4em; border-bottom: 1px solid var(--theme-border, #334155); padding-bottom: 0.3em; }
+    .file-viewer-content.rendered h3 { font-size: 1.2em; }
+    .file-viewer-content.rendered a { color: var(--theme-accent, #e94560); text-decoration: underline; }
+    .file-viewer-content.rendered code {
+      background: var(--theme-button-bg, #1e293b);
+      padding: 2px 5px;
+      border-radius: 3px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9em;
+    }
+    .file-viewer-content.rendered pre {
+      background: var(--theme-button-bg, #1e293b);
+      padding: 10px 12px;
+      border-radius: 6px;
+      overflow-x: auto;
+      margin: 0.8em 0;
+    }
+    .file-viewer-content.rendered pre code {
+      background: none;
+      padding: 0;
+    }
+    .file-viewer-content.rendered blockquote {
+      border-left: 3px solid var(--theme-accent, #e94560);
+      margin: 0.8em 0;
+      padding: 0.4em 1em;
+      color: var(--theme-muted, #64748b);
+    }
+    .file-viewer-content.rendered ul,
+    .file-viewer-content.rendered ol {
+      padding-left: 1.5em;
+      margin: 0.5em 0;
+    }
+    .file-viewer-content.rendered li { margin: 0.25em 0; }
+    .file-viewer-content.rendered table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 0.8em 0;
+    }
+    .file-viewer-content.rendered th,
+    .file-viewer-content.rendered td {
+      border: 1px solid var(--theme-border, #334155);
+      padding: 6px 10px;
+      text-align: left;
+    }
+    .file-viewer-content.rendered th {
+      background: var(--theme-button-bg, #1e293b);
+    }
+    .file-viewer-content.rendered hr {
+      border: none;
+      border-top: 1px solid var(--theme-border, #334155);
+      margin: 1em 0;
+    }
+    .file-viewer-content.rendered img {
+      max-width: 100%;
+      border-radius: 4px;
+    }
     .file-viewer-content {
       flex: 1;
       overflow: auto;
@@ -1143,6 +1222,7 @@
         <div id="file-viewer-resize-handle" class="file-viewer-resize-handle"></div>
         <div class="file-viewer-header">
           <span id="file-viewer-name" class="fv-name">file.txt</span>
+          <button id="file-viewer-render-toggle" class="fv-render-toggle hidden" title="Toggle rendered view">👁</button>
           <span id="file-viewer-live" class="fv-live-indicator"></span>
           <button id="file-viewer-close" title="Close viewer">✕</button>
         </div>
@@ -1170,6 +1250,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links@0.9.0/lib/xterm-addon-web-links.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="highlighter.js"></script>
   <script src="diff.js"></script>
   <script src="filebrowser.js"></script>

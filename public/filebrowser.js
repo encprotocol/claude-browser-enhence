@@ -23,6 +23,11 @@ window.FileBrowser = (function () {
   let currentViewerMode = 'text'; // 'text' | 'image' | 'pdf'
   let liveFlashTimer = null;
 
+  // Markdown render state
+  let renderToggleEl = null;
+  let currentRawContent = null;
+  let mdRenderMode = false;
+
   // Extension → highlight.js language
   const EXT_LANGS = {
     js: 'javascript', mjs: 'javascript', cjs: 'javascript',
@@ -72,6 +77,20 @@ window.FileBrowser = (function () {
     viewerHeaderNameEl = document.getElementById('file-viewer-name');
     viewerLiveEl = document.getElementById('file-viewer-live');
     sidebarEl = document.getElementById('file-sidebar');
+    renderToggleEl = document.getElementById('file-viewer-render-toggle');
+
+    // Markdown render toggle
+    if (renderToggleEl) {
+      renderToggleEl.addEventListener('click', () => {
+        mdRenderMode = !mdRenderMode;
+        renderToggleEl.classList.toggle('active', mdRenderMode);
+        if (mdRenderMode) {
+          renderMarkdown();
+        } else {
+          showRawMarkdown();
+        }
+      });
+    }
 
     // Apply saved viewer width
     if (viewerPanelEl) viewerPanelEl.style.setProperty('--fv-width', fvWidth + 'px');
@@ -290,8 +309,13 @@ window.FileBrowser = (function () {
       return;
     }
     if (data.content !== undefined) {
-      const name = viewerHeaderNameEl ? viewerHeaderNameEl.textContent : '';
-      applyHighlighting(name, data.content);
+      currentRawContent = data.content;
+      if (mdRenderMode) {
+        renderMarkdown();
+      } else {
+        const name = viewerHeaderNameEl ? viewerHeaderNameEl.textContent : '';
+        applyHighlighting(name, data.content);
+      }
       viewerContentEl.style.color = '';
       // Flash the live indicator
       if (viewerLiveEl) {
@@ -399,6 +423,23 @@ window.FileBrowser = (function () {
     }
   }
 
+  function renderMarkdown() {
+    if (!currentRawContent || typeof marked === 'undefined') return;
+    try {
+      viewerContentEl.innerHTML = marked.parse(currentRawContent);
+      viewerContentEl.classList.add('rendered');
+    } catch {
+      viewerContentEl.textContent = currentRawContent;
+    }
+  }
+
+  function showRawMarkdown() {
+    if (!currentRawContent) return;
+    const name = viewerHeaderNameEl ? viewerHeaderNameEl.textContent : '';
+    applyHighlighting(name, currentRawContent);
+    viewerContentEl.classList.remove('rendered');
+  }
+
   function showImageViewer(name, filePath) {
     if (!viewerPanelEl) return;
     viewerHeaderNameEl.textContent = name || 'Image';
@@ -435,12 +476,24 @@ window.FileBrowser = (function () {
     viewerHeaderNameEl.textContent = name || 'File';
     viewerContentEl.style.padding = '';
     currentViewerMode = 'text';
+
+    // Reset markdown render state
+    mdRenderMode = false;
+    currentRawContent = null;
+    viewerContentEl.classList.remove('rendered');
+    if (renderToggleEl) {
+      renderToggleEl.classList.remove('active');
+      const ext = (name || '').split('.').pop().toLowerCase();
+      renderToggleEl.classList.toggle('hidden', ext !== 'md' && ext !== 'markdown');
+    }
+
     if (isError) {
       viewerContentEl.textContent = content;
       viewerContentEl.style.color = 'var(--theme-accent, #ef4444)';
       currentViewedFile = null;
       if (viewerLiveEl) viewerLiveEl.classList.remove('active');
     } else {
+      currentRawContent = content;
       applyHighlighting(name, content);
       viewerContentEl.style.color = '';
       currentViewedFile = filePath;
@@ -459,6 +512,13 @@ window.FileBrowser = (function () {
       sendMessage('unwatch-file', { path: currentViewedFile });
     }
     currentViewedFile = null;
+    currentRawContent = null;
+    mdRenderMode = false;
+    viewerContentEl.classList.remove('rendered');
+    if (renderToggleEl) {
+      renderToggleEl.classList.add('hidden');
+      renderToggleEl.classList.remove('active');
+    }
     if (viewerLiveEl) viewerLiveEl.classList.remove('active');
     clearTimeout(liveFlashTimer);
   }
