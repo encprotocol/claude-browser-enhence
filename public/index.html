@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Synesthesia Terminal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
   <style>
     :root {
@@ -892,6 +895,12 @@
     const terminalElement = document.getElementById('terminal');
     term.open(terminalElement);
     fitAddon.fit();
+
+    // Re-fit after web fonts load so cursor aligns to correct cell size
+    document.fonts.ready.then(() => {
+      fitAddon.fit();
+      if (typeof sendResize === 'function') sendResize();
+    });
 
     const statusDot = document.getElementById('status-dot');
     const statusText = document.getElementById('status-text');
