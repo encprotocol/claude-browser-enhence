@@ -612,6 +612,276 @@
       margin-top: 8px;
       text-align: center;
     }
+
+    /* Main horizontal flex area */
+    #main-area {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* File Sidebar (overlay) */
+    .file-sidebar {
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      display: flex;
+      z-index: 5;
+    }
+    .file-sidebar.hidden {
+      display: none;
+    }
+
+    /* File Browser */
+    .file-browser {
+      width: 280px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      background: var(--theme-header, #16213e);
+      border-left: 1px solid var(--theme-button-border, #334155);
+      color: var(--theme-fg, #e2e8f0);
+      font-size: 13px;
+      overflow: hidden;
+    }
+    .file-browser.hidden {
+      display: none;
+    }
+    .file-browser-header {
+      display: flex;
+      align-items: center;
+      padding: 8px 10px;
+      gap: 6px;
+      border-bottom: 1px solid var(--theme-button-border, #334155);
+      flex-shrink: 0;
+    }
+    .file-browser-header .fb-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--theme-muted, #94a3b8);
+      flex: 1;
+    }
+    .file-browser-header button {
+      background: none;
+      border: none;
+      color: var(--theme-muted, #64748b);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 2px 4px;
+      border-radius: 4px;
+      line-height: 1;
+    }
+    .file-browser-header button:hover {
+      color: var(--theme-fg, #e2e8f0);
+      background: var(--theme-button-bg, #1e293b);
+    }
+    .file-browser-path {
+      padding: 4px 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--theme-muted, #64748b);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      border-bottom: 1px solid var(--theme-button-border, #334155);
+      flex-shrink: 0;
+    }
+    .file-browser-tree {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 4px 0;
+    }
+    .file-browser-tree::-webkit-scrollbar {
+      width: 6px;
+    }
+    .file-browser-tree::-webkit-scrollbar-thumb {
+      background: var(--theme-button-border, #334155);
+      border-radius: 3px;
+    }
+    .file-browser-entry {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      cursor: pointer;
+      white-space: nowrap;
+      user-select: none;
+    }
+    .file-browser-entry:hover {
+      background: var(--theme-button-bg, #1e293b);
+    }
+    .file-browser-entry.selected {
+      background: var(--theme-button-bg, #1e293b);
+      outline: 1px solid var(--theme-accent, #e94560);
+      outline-offset: -1px;
+    }
+    .fb-chevron {
+      font-size: 8px;
+      width: 14px;
+      text-align: center;
+      flex-shrink: 0;
+      transition: transform 0.15s;
+      color: var(--theme-muted, #64748b);
+    }
+    .fb-chevron.expanded {
+      transform: rotate(90deg);
+    }
+    .fb-icon {
+      font-size: 14px;
+      flex-shrink: 0;
+      width: 18px;
+      text-align: center;
+    }
+    .fb-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .file-browser-empty {
+      padding: 16px;
+      color: var(--theme-muted, #64748b);
+      font-size: 12px;
+      text-align: center;
+    }
+
+    /* File Viewer Panel (separate column left of file browser) */
+    .file-viewer-panel {
+      width: var(--fv-width, 400px);
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      background: var(--theme-header, #16213e);
+      border-left: 1px solid var(--theme-button-border, #334155);
+      border-right: 1px solid var(--theme-button-border, #334155);
+      color: var(--theme-fg, #e2e8f0);
+      font-size: 13px;
+      overflow: hidden;
+      position: relative;
+    }
+    .file-viewer-resize-handle {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 5px;
+      cursor: ew-resize;
+      z-index: 10;
+      transition: background 0.15s;
+    }
+    .file-viewer-resize-handle:hover,
+    .file-viewer-resize-handle.dragging {
+      background: var(--theme-accent, #e94560);
+    }
+    .file-viewer-panel.hidden {
+      display: none;
+    }
+    .file-viewer-header {
+      display: flex;
+      align-items: center;
+      padding: 6px 10px;
+      gap: 6px;
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--theme-button-border, #334155);
+    }
+    .fv-live-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+      opacity: 0;
+      flex-shrink: 0;
+      transition: opacity 0.3s;
+    }
+    .fv-live-indicator.active {
+      opacity: 1;
+      animation: fv-pulse 1s ease-in-out;
+    }
+    @keyframes fv-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .file-viewer-header .fv-name {
+      flex: 1;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--theme-fg, #e2e8f0);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .file-viewer-header button {
+      background: none;
+      border: none;
+      color: var(--theme-muted, #64748b);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 2px 4px;
+      border-radius: 4px;
+      line-height: 1;
+    }
+    .file-viewer-header button:hover {
+      color: var(--theme-fg, #e2e8f0);
+      background: var(--theme-button-bg, #1e293b);
+    }
+    .file-viewer-content {
+      flex: 1;
+      overflow: auto;
+      padding: 8px 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--theme-fg, #e2e8f0);
+      white-space: pre-wrap;
+      word-break: break-all;
+      margin: 0;
+      tab-size: 4;
+    }
+    .file-viewer-content::-webkit-scrollbar {
+      width: 6px;
+    }
+    .file-viewer-content::-webkit-scrollbar-thumb {
+      background: var(--theme-button-border, #334155);
+      border-radius: 3px;
+    }
+    /* Syntax highlighting tokens — themed via CSS vars */
+    .file-viewer-content .hljs { background: transparent; }
+    .file-viewer-content .hljs-keyword,
+    .file-viewer-content .hljs-selector-tag { color: var(--theme-hljs-keyword, #c678dd); }
+    .file-viewer-content .hljs-string,
+    .file-viewer-content .hljs-addition { color: var(--theme-hljs-string, #98c379); }
+    .file-viewer-content .hljs-number,
+    .file-viewer-content .hljs-literal { color: var(--theme-hljs-number, #d19a66); }
+    .file-viewer-content .hljs-comment,
+    .file-viewer-content .hljs-quote { color: var(--theme-muted, #94a3b8); font-style: italic; }
+    .file-viewer-content .hljs-title,
+    .file-viewer-content .hljs-title\.function_ { color: var(--theme-hljs-function, #61afef); }
+    .file-viewer-content .hljs-type,
+    .file-viewer-content .hljs-built_in { color: var(--theme-hljs-type, #e5c07b); }
+    .file-viewer-content .hljs-meta,
+    .file-viewer-content .hljs-deletion { color: var(--theme-hljs-meta, #e06c75); }
+    .file-viewer-content .hljs-attr,
+    .file-viewer-content .hljs-attribute { color: var(--theme-hljs-number, #d19a66); }
+    .file-viewer-content .hljs-variable,
+    .file-viewer-content .hljs-template-variable { color: var(--theme-hljs-meta, #e06c75); }
+    .file-viewer-content .hljs-symbol,
+    .file-viewer-content .hljs-bullet { color: var(--theme-hljs-string, #98c379); }
+    .file-viewer-content .hljs-regexp { color: var(--theme-hljs-string, #98c379); }
+    /* Image & PDF preview */
+    .file-viewer-content img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: 8px auto;
+    }
+    .file-viewer-content iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
   </style>
 </head>
 <body>
@@ -625,6 +895,7 @@
         <span class="toggle-icon">Aa</span>
         <span class="toggle-label">Correction</span>
       </button>
+      <button id="file-browser-toggle" class="settings-btn" title="File Browser (Cmd+B)">📁</button>
       <button id="settings-btn" class="settings-btn" title="Theme Settings">⚙</button>
       <div class="status">
         <div class="status-dot" id="status-dot"></div>
@@ -822,22 +1093,46 @@
     </div>
   </div>
 
-  <div id="terminal-container">
-    <div id="terminal"></div>
-    <!-- Unified Correction Panel -->
-    <div id="correction-panel" class="correction-panel">
-      <!-- Input state -->
-      <div id="correction-input-state" class="correction-state">
-        <textarea id="correction-input-text" class="correction-input-text"
-                  placeholder="Type and press Enter to check... (Esc to close)" rows="3"></textarea>
-      </div>
-      <!-- Result state -->
-      <div id="correction-result-state" class="correction-state" style="display: none;">
-        <div class="correction-diff" id="correction-diff"></div>
-        <div class="correction-result-actions">
-          <span class="correction-result-hint">Enter = accept corrected · Esc = send original</span>
-          <button id="correction-copy-btn" class="correction-copy-btn">Copy (⌘C)</button>
+  <div id="main-area">
+    <div id="terminal-container">
+      <div id="terminal"></div>
+      <!-- Unified Correction Panel -->
+      <div id="correction-panel" class="correction-panel">
+        <!-- Input state -->
+        <div id="correction-input-state" class="correction-state">
+          <textarea id="correction-input-text" class="correction-input-text"
+                    placeholder="Type and press Enter to check... (Esc to close)" rows="3"></textarea>
         </div>
+        <!-- Result state -->
+        <div id="correction-result-state" class="correction-state" style="display: none;">
+          <div class="correction-diff" id="correction-diff"></div>
+          <div class="correction-result-actions">
+            <span class="correction-result-hint">Enter = accept corrected · Esc = send original</span>
+            <button id="correction-copy-btn" class="correction-copy-btn">Copy (⌘C)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="file-sidebar" class="file-sidebar hidden">
+      <div id="file-viewer-panel" class="file-viewer-panel hidden">
+        <div id="file-viewer-resize-handle" class="file-viewer-resize-handle"></div>
+        <div class="file-viewer-header">
+          <span id="file-viewer-name" class="fv-name">file.txt</span>
+          <span id="file-viewer-live" class="fv-live-indicator"></span>
+          <button id="file-viewer-close" title="Close viewer">✕</button>
+        </div>
+        <div id="file-viewer-content" class="file-viewer-content"></div>
+      </div>
+      <div id="file-browser" class="file-browser hidden">
+        <div class="file-browser-header">
+          <span class="fb-title">Explorer</span>
+          <button id="file-browser-link" title="Link to active tab" style="opacity:1">🔗</button>
+          <button id="file-browser-toggle-hidden" title="Toggle hidden files" style="opacity:0.5">👁</button>
+          <button id="file-browser-refresh" title="Refresh">↻</button>
+          <button id="file-browser-close" title="Close">✕</button>
+        </div>
+        <div id="file-browser-path" class="file-browser-path">~</div>
+        <div id="file-browser-tree" class="file-browser-tree"></div>
       </div>
     </div>
   </div>
@@ -845,8 +1140,10 @@
   <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links@0.9.0/lib/xterm-addon-web-links.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
   <script src="highlighter.js"></script>
   <script src="diff.js"></script>
+  <script src="filebrowser.js"></script>
   <script>
     // Load saved font settings
     const savedFontSettings = JSON.parse(localStorage.getItem('synesthesia-font-settings')) || {
@@ -1493,6 +1790,14 @@
       ws.onopen = () => {
         statusDot.classList.add('connected');
         statusText.textContent = 'Connected';
+        // Initialize file browser
+        FileBrowser.init({
+          sendMessage: (type, data) => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type, ...data }));
+            }
+          }
+        });
         // Send initial terminal size after connection is established
         setTimeout(() => {
           fitAddon.fit();
@@ -1510,8 +1815,9 @@
               createTabElement(msg.id, msg.name);
               break;
 
-            case 'session-switched':
+            case 'session-switched': {
               saveCorrectionState();
+              const prevId = activeSessionId;
               activeSessionId = msg.id;
               updateTabs();
               term.clear();
@@ -1521,11 +1827,14 @@
               sendResize();
               // Scroll to bottom after history replay completes
               setTimeout(() => term.scrollToBottom(), 150);
+              FileBrowser.switchSession(prevId, msg.id);
               break;
+            }
 
             case 'session-closed': {
               sessions.delete(msg.id);
               correctionStates.delete(msg.id);
+              FileBrowser.clearSessionState(msg.id);
               const tab = document.querySelector(`.tab[data-session-id="${msg.id}"]`);
               if (tab) tab.remove();
               break;
@@ -1598,6 +1907,22 @@
               }
               break;
 
+            case 'cwd-result':
+              FileBrowser.handleCwdResult(msg);
+              break;
+
+            case 'directory-listing':
+              FileBrowser.handleDirectoryListing(msg);
+              break;
+
+            case 'file-content':
+              FileBrowser.handleFileContent(msg);
+              break;
+
+            case 'file-update':
+              FileBrowser.handleFileUpdate(msg);
+              break;
+
           }
         } catch (e) {
           console.error('Parse error:', e);
@@ -1630,6 +1955,8 @@
 
       // Send to server normally
       ws.send(JSON.stringify({ type: 'input', sessionId: activeSessionId, data }));
+      // Check if cwd changed after Enter key
+      if (data.indexOf('\r') !== -1) FileBrowser.checkCwdSoon();
     });
 
     // Handle resize
@@ -1653,8 +1980,17 @@
     // New tab button
     newTabBtn.onclick = createNewSession;
 
+    // File browser toggle button
+    document.getElementById('file-browser-toggle').onclick = () => FileBrowser.toggle(undefined, activeSessionId);
+
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
+      // Cmd+B: Toggle file browser
+      if (e.metaKey && e.key === 'b') {
+        e.preventDefault();
+        FileBrowser.toggle(undefined, activeSessionId);
+        return;
+      }
       // Cmd+X: Toggle correction mode
       if (e.metaKey && e.key === 'x') {
         e.preventDefault();
@@ -1991,6 +2327,14 @@
       document.documentElement.style.setProperty('--theme-button-text', buttonText);
       document.documentElement.style.setProperty('--theme-muted', mutedText);
 
+      // Syntax highlighting vars
+      document.documentElement.style.setProperty('--theme-hljs-keyword', theme.magenta || '#c678dd');
+      document.documentElement.style.setProperty('--theme-hljs-string', theme.green || '#98c379');
+      document.documentElement.style.setProperty('--theme-hljs-number', theme.yellow || '#d19a66');
+      document.documentElement.style.setProperty('--theme-hljs-function', theme.blue || '#61afef');
+      document.documentElement.style.setProperty('--theme-hljs-type', theme.yellow || '#e5c07b');
+      document.documentElement.style.setProperty('--theme-hljs-meta', theme.red || '#e06c75');
+
       // Update active tab colors
       document.querySelectorAll('.tab.active').forEach(tab => {
         tab.style.background = theme.activeTab || theme.background;
@@ -2016,6 +2360,12 @@
         settingsBtn.style.background = buttonBg;
         settingsBtn.style.borderColor = buttonBorder;
         settingsBtn.style.color = mutedText;
+      }
+      const fileBrowserToggle = document.getElementById('file-browser-toggle');
+      if (fileBrowserToggle) {
+        fileBrowserToggle.style.background = buttonBg;
+        fileBrowserToggle.style.borderColor = buttonBorder;
+        fileBrowserToggle.style.color = mutedText;
       }
       if (newTabBtn) {
         newTabBtn.style.background = 'transparent';

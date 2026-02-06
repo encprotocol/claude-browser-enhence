@@ -3,11 +3,27 @@ const { WebSocketServer } = require('ws');
 const { spawn, execSync } = require('child_process');
 const pty = require('node-pty');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.static(path.join(__dirname, 'public')));
+
+app.get('/api/file', (req, res) => {
+  const homeDir = process.env.HOME || '/tmp';
+  const filePath = path.resolve(req.query.path || '');
+  if (!filePath || !filePath.startsWith(homeDir))
+    return res.status(403).json({ error: 'Access denied' });
+  try {
+    const stat = fs.statSync(filePath);
+    if (stat.size > 10 * 1024 * 1024)
+      return res.status(413).json({ error: 'File too large' });
+    res.sendFile(filePath);
+  } catch (err) {
+    res.status(404).json({ error: err.message });
+  }
+});
 
 const server = app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
@@ -18,6 +34,7 @@ const wss = new WebSocketServer({ server });
 // Persistent session storage by client ID
 const clientSessions = new Map();
 const clientConnections = new Map();
+const clientFileWatchers = new Map(); // clientId → Map<filePath, FSWatcher>
 
 
 // Session timeout (clean up after 1 hour of no connection)
@@ -65,11 +82,32 @@ setInterval(() => {
           session.pty.kill();
         }
       }
+      cleanupClientWatchers(clientId);
       clientSessions.delete(clientId);
       console.log(`Cleaned up stale client: ${clientId}`);
     }
   }
 }, 60000);
+
+function cleanupClientWatchers(clientId) {
+  const watchers = clientFileWatchers.get(clientId);
+  if (!watchers) return;
+  for (const [, watcher] of watchers) {
+    try { watcher.close(); } catch {}
+  }
+  clientFileWatchers.delete(clientId);
+}
+
+function unwatchFile(clientId, filePath) {
+  const watchers = clientFileWatchers.get(clientId);
+  if (!watchers) return;
+  const watcher = watchers.get(filePath);
+  if (watcher) {
+    try { watcher.close(); } catch {}
+    watchers.delete(filePath);
+  }
+  if (watchers.size === 0) clientFileWatchers.delete(clientId);
+}
 
 wss.on('connection', (ws, req) => {
   // Get client ID from query string
@@ -327,6 +365,139 @@ wss.on('connection', (ws, req) => {
           }
           break;
         }
+
+        case 'get-cwd': {
+          const session = sessions.get(msg.sessionId);
+          if (!session || !session.pty) break;
+          let cwd = process.env.HOME || '/tmp';
+          try {
+            const result = execSync(
+              `lsof -p ${session.pty.pid} -a -d cwd -Fn | grep ^n | cut -c2-`,
+              { timeout: 3000, encoding: 'utf8' }
+            ).trim();
+            if (result) cwd = result;
+          } catch {}
+          sendMessage('cwd-result', { cwd });
+          break;
+        }
+
+        case 'list-directory': {
+          const homeDir = process.env.HOME || '/tmp';
+          const requestedPath = path.resolve(msg.path || homeDir);
+          if (!requestedPath.startsWith(homeDir)) {
+            sendMessage('directory-listing', { error: 'Access denied', path: requestedPath });
+            break;
+          }
+          try {
+            const entries = fs.readdirSync(requestedPath, { withFileTypes: true });
+            const items = [];
+            for (const entry of entries) {
+              if (!msg.showHidden && entry.name.startsWith('.')) continue;
+              items.push({
+                name: entry.name,
+                type: entry.isDirectory() ? 'directory' : 'file',
+                path: path.join(requestedPath, entry.name)
+              });
+            }
+            items.sort((a, b) => {
+              if (a.type !== b.type) return a.type === 'directory' ? -1 : 1;
+              return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+            });
+            sendMessage('directory-listing', { path: requestedPath, entries: items });
+          } catch (err) {
+            sendMessage('directory-listing', { error: err.message, path: requestedPath });
+          }
+          break;
+        }
+
+        case 'read-file': {
+          const homeDir = process.env.HOME || '/tmp';
+          const filePath = path.resolve(msg.path);
+          if (!filePath.startsWith(homeDir)) {
+            sendMessage('file-content', { error: 'Access denied', path: filePath });
+            break;
+          }
+          try {
+            const stat = fs.statSync(filePath);
+            if (stat.size > 512 * 1024) {
+              sendMessage('file-content', { error: 'File too large (max 512KB)', path: filePath });
+              break;
+            }
+            const buffer = Buffer.alloc(Math.min(8192, stat.size));
+            const fd = fs.openSync(filePath, 'r');
+            fs.readSync(fd, buffer, 0, buffer.length, 0);
+            fs.closeSync(fd);
+            if (buffer.includes(0)) {
+              sendMessage('file-content', { error: 'Binary file — cannot display', path: filePath });
+              break;
+            }
+            const content = fs.readFileSync(filePath, 'utf8');
+            sendMessage('file-content', { path: filePath, content, name: path.basename(filePath) });
+          } catch (err) {
+            sendMessage('file-content', { error: err.message, path: filePath });
+          }
+          break;
+        }
+
+        case 'watch-file': {
+          const homeDir = process.env.HOME || '/tmp';
+          const filePath = path.resolve(msg.path);
+          if (!filePath.startsWith(homeDir)) break;
+
+          // Get or create watchers map for this client
+          if (!clientFileWatchers.has(clientId)) {
+            clientFileWatchers.set(clientId, new Map());
+          }
+          const watchers = clientFileWatchers.get(clientId);
+
+          // Already watching this file
+          if (watchers.has(filePath)) break;
+
+          try {
+            let debounceTimer = null;
+            const watcher = fs.watch(filePath, () => {
+              // Debounce rapid changes (100ms)
+              clearTimeout(debounceTimer);
+              debounceTimer = setTimeout(() => {
+                try {
+                  const stat = fs.statSync(filePath);
+                  if (stat.size > 512 * 1024) {
+                    sendMessage('file-update', { error: 'File too large', path: filePath });
+                    return;
+                  }
+                  const buf = Buffer.alloc(Math.min(8192, stat.size));
+                  const fd = fs.openSync(filePath, 'r');
+                  fs.readSync(fd, buf, 0, buf.length, 0);
+                  fs.closeSync(fd);
+                  if (buf.includes(0)) {
+                    sendMessage('file-update', { error: 'Binary file', path: filePath });
+                    return;
+                  }
+                  const content = fs.readFileSync(filePath, 'utf8');
+                  sendMessage('file-update', { path: filePath, content });
+                } catch (err) {
+                  sendMessage('file-update', { error: err.message, path: filePath });
+                  unwatchFile(clientId, filePath);
+                }
+              }, 100);
+            });
+
+            watcher.on('error', () => {
+              unwatchFile(clientId, filePath);
+            });
+
+            watchers.set(filePath, watcher);
+          } catch (err) {
+            // Silently ignore watch failures (e.g. file doesn't exist)
+          }
+          break;
+        }
+
+        case 'unwatch-file': {
+          const filePath = path.resolve(msg.path);
+          unwatchFile(clientId, filePath);
+          break;
+        }
       }
     } catch (e) {
       console.error('Message error:', e);
@@ -337,6 +508,7 @@ wss.on('connection', (ws, req) => {
     console.log(`Client disconnected: ${clientId}`);
     clientConnections.delete(clientId);
     clientData.lastSeen = Date.now();
+    cleanupClientWatchers(clientId);
     // Sessions persist - don't delete them
   });
 });
