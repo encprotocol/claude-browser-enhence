@@ -886,6 +886,11 @@
     .file-viewer-content .hljs-symbol,
     .file-viewer-content .hljs-bullet { color: var(--theme-hljs-string, #98c379); }
     .file-viewer-content .hljs-regexp { color: var(--theme-hljs-string, #98c379); }
+    .file-viewer-content .hljs-section { color: var(--theme-hljs-keyword, #c678dd); font-weight: bold; }
+    .file-viewer-content .hljs-strong { font-weight: bold; }
+    .file-viewer-content .hljs-emphasis { font-style: italic; }
+    .file-viewer-content .hljs-link { color: var(--theme-hljs-function, #61afef); text-decoration: underline; }
+    .file-viewer-content .hljs-code { color: var(--theme-hljs-string, #98c379); }
     /* Image & PDF preview */
     .file-viewer-content img {
       max-width: 100%;
@@ -1063,6 +1068,10 @@
           <div class="color-item">
             <label>Accent</label>
             <input type="color" class="color-picker" id="color-accent" value="#e94560">
+          </div>
+          <div class="color-item">
+            <label>Muted Text</label>
+            <input type="color" class="color-picker" id="color-brightBlack" value="#94a3b8">
           </div>
         </div>
       </div>
@@ -2248,6 +2257,7 @@
       tabbar: document.getElementById('color-tabbar'),
       activeTab: document.getElementById('color-activeTab'),
       accent: document.getElementById('color-accent'),
+      brightBlack: document.getElementById('color-brightBlack'),
       keyword: document.getElementById('color-keyword'),
       string: document.getElementById('color-string'),
       number: document.getElementById('color-number'),
