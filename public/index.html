@@ -184,50 +184,24 @@
     .correction-panel {
       display: none;
       position: absolute;
-      bottom: 20px;
-      left: 20px;
-      right: 20px;
-      background: var(--theme-header, #1e293b);
-      border: 1px solid var(--theme-accent, #3b82f6);
+      bottom: 30%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      max-width: calc(100% - 40px);
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      border: 1px solid var(--theme-button-border, #334155);
       border-radius: 8px;
       padding: 12px;
       z-index: 1000;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
       font-family: 'JetBrains Mono', 'Fira Code', monospace;
     }
 
     .correction-panel.visible {
       display: block;
-    }
-
-    .correction-panel-header {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 12px;
-      color: var(--theme-fg, #e2e8f0);
-      font-size: 13px;
-      font-weight: 500;
-    }
-
-    .correction-hint {
-      color: var(--theme-muted, #64748b);
-      font-size: 11px;
-      font-weight: normal;
-    }
-
-    .correction-panel-close {
-      margin-left: auto;
-      background: none;
-      border: none;
-      color: var(--theme-muted, #64748b);
-      font-size: 20px;
-      cursor: pointer;
-      padding: 0 4px;
-    }
-
-    .correction-panel-close:hover {
-      color: var(--theme-fg, #fff);
     }
 
     .correction-state {
@@ -236,8 +210,8 @@
 
     .correction-input-text {
       width: 100%;
-      background: var(--theme-bg, #0f172a);
-      border: 1px solid var(--theme-button-border, #334155);
+      background: transparent;
+      border: none;
       border-radius: 4px;
       color: var(--theme-fg, #e2e8f0);
       font-family: inherit;
@@ -245,20 +219,17 @@
       padding: 10px;
       resize: vertical;
       min-height: 60px;
-      margin-bottom: 12px;
     }
 
     .correction-input-text:focus {
       outline: none;
-      border-color: var(--theme-accent, #3b82f6);
     }
 
     .correction-diff {
-      background: var(--theme-bg, #0f172a);
-      border: 1px solid var(--theme-button-border, #334155);
+      background: transparent;
+      border: none;
       border-radius: 4px;
       padding: 10px;
-      margin-bottom: 12px;
       color: var(--theme-fg, #e2e8f0);
       line-height: 1.6;
       white-space: pre-wrap;
@@ -268,39 +239,23 @@
     .correction-diff .removed {
       color: #ef4444;
       text-decoration: line-through;
+      background: rgba(239, 68, 68, 0.15);
+      border-radius: 2px;
+      padding: 0 2px;
     }
 
     .correction-diff .added {
       color: #22c55e;
+      background: rgba(34, 197, 94, 0.15);
+      border-radius: 2px;
+      padding: 0 2px;
     }
 
-    .correction-actions {
-      display: flex;
-      gap: 8px;
-    }
-
-    .correction-btn {
-      padding: 8px 16px;
-      border-radius: 4px;
-      border: 1px solid var(--theme-button-border, #334155);
-      background: var(--theme-button-bg, #334155);
-      color: var(--theme-fg, #e2e8f0);
-      font-size: 13px;
-      cursor: pointer;
-    }
-
-    .correction-btn:hover {
-      opacity: 0.85;
-    }
-
-    .correction-btn.primary {
-      background: var(--theme-accent, #3b82f6);
-      border-color: var(--theme-accent, #3b82f6);
-      color: #fff;
-    }
-
-    .correction-btn.primary:hover {
-      opacity: 0.9;
+    .correction-result-hint {
+      color: var(--theme-muted, #64748b);
+      font-size: 11px;
+      text-align: center;
+      margin-top: 8px;
     }
 
     /* Settings button */
@@ -798,27 +753,15 @@
     <div id="terminal"></div>
     <!-- Unified Correction Panel -->
     <div id="correction-panel" class="correction-panel">
-      <div class="correction-panel-header">
-        <span>Correction Mode</span>
-        <span class="correction-hint">(Cmd+X to toggle)</span>
-        <button id="correction-panel-close" class="correction-panel-close">&times;</button>
-      </div>
       <!-- Input state -->
       <div id="correction-input-state" class="correction-state">
         <textarea id="correction-input-text" class="correction-input-text"
-                  placeholder="Type here... (Shift+Enter for newline)" rows="3"></textarea>
-        <div class="correction-actions">
-          <button id="correction-check-btn" class="correction-btn primary">Check & Correct</button>
-          <button id="correction-send-btn" class="correction-btn">Send as-is</button>
-        </div>
+                  placeholder="Type and press Enter to check... (Esc to close)" rows="3"></textarea>
       </div>
       <!-- Result state -->
       <div id="correction-result-state" class="correction-state" style="display: none;">
         <div class="correction-diff" id="correction-diff"></div>
-        <div class="correction-actions">
-          <button id="correction-accept-btn" class="correction-btn primary">Accept</button>
-          <button id="correction-edit-btn" class="correction-btn">Edit</button>
-        </div>
+        <div class="correction-result-hint">Enter = accept corrected · Esc = send original</div>
       </div>
     </div>
   </div>
@@ -842,7 +785,7 @@
         cursor: '#e94560',
         cursorAccent: '#1a1a2e',
         selection: 'rgba(233, 69, 96, 0.3)',
-        black: '#1a1a2e',
+        black: '#94a3b8',
         red: '#ef4444',
         green: '#22c55e',
         yellow: '#eab308',
@@ -898,6 +841,60 @@
     let pendingCorrection = null;
     let inputBuffer = '';
     let waitingForCorrection = false;
+
+    // Per-tab correction state
+    const correctionStates = new Map(); // sessionId -> {inputBuffer, pendingCorrection, waitingForCorrection, textValue, showingResult, diffHtml}
+
+    function saveCorrectionState() {
+      if (!activeSessionId) return;
+      const panel = document.getElementById('correction-panel');
+      const resultState = document.getElementById('correction-result-state');
+      const inputText = document.getElementById('correction-input-text');
+      const diff = document.getElementById('correction-diff');
+      correctionStates.set(activeSessionId, {
+        inputBuffer,
+        pendingCorrection,
+        waitingForCorrection,
+        textValue: inputText ? inputText.value : '',
+        showingResult: resultState ? resultState.style.display !== 'none' : false,
+        diffHtml: diff ? diff.innerHTML : '',
+        panelVisible: panel ? panel.classList.contains('visible') : false
+      });
+    }
+
+    function restoreCorrectionState(sessionId) {
+      const state = correctionStates.get(sessionId);
+      const panel = document.getElementById('correction-panel');
+      const inputText = document.getElementById('correction-input-text');
+      if (state) {
+        inputBuffer = state.inputBuffer;
+        pendingCorrection = state.pendingCorrection;
+        waitingForCorrection = state.waitingForCorrection;
+        if (inputText) inputText.value = state.textValue;
+        if (state.panelVisible && correctionEnabled) {
+          panel.classList.add('visible');
+          if (state.showingResult) {
+            showResultState(state.diffHtml);
+          } else {
+            showInputState();
+          }
+        } else {
+          panel.classList.remove('visible');
+        }
+      } else {
+        // Reset to defaults for new/unknown sessions
+        inputBuffer = '';
+        pendingCorrection = null;
+        waitingForCorrection = false;
+        if (inputText) inputText.value = '';
+        if (correctionEnabled) {
+          panel.classList.add('visible');
+          showInputState();
+        } else {
+          panel.classList.remove('visible');
+        }
+      }
+    }
 
     // Image cache: Array of {data, timestamp} - keeps last 100 pasted images
     const MAX_IMAGE_CACHE = 100;
@@ -1165,11 +1162,6 @@
     const correctionResultState = document.getElementById('correction-result-state');
     const correctionInputText = document.getElementById('correction-input-text');
     const correctionDiff = document.getElementById('correction-diff');
-    const correctionPanelClose = document.getElementById('correction-panel-close');
-    const correctionCheckBtn = document.getElementById('correction-check-btn');
-    const correctionSendBtn = document.getElementById('correction-send-btn');
-    const correctionAcceptBtn = document.getElementById('correction-accept-btn');
-    const correctionEditBtn = document.getElementById('correction-edit-btn');
 
     // Initialize correction toggle state
     // Restore correction mode state on load
@@ -1216,11 +1208,10 @@
       if (text.trim()) {
         ws.send(JSON.stringify({ type: 'input', sessionId: activeSessionId, data: text }));
       }
-      // Clear input but keep panel open
       correctionInputText.value = '';
       inputBuffer = '';
       pendingCorrection = null;
-      showInputState();
+      hideCorrectionPanel();
     }
 
     // Request correction from server
@@ -1243,6 +1234,11 @@
 
     // Toggle correction mode
     correctionToggle.onclick = () => {
+      // If correction is enabled but panel was dismissed with Esc, just re-show it
+      if (correctionEnabled && !correctionPanel.classList.contains('visible')) {
+        showCorrectionPanel();
+        return;
+      }
       correctionEnabled = !correctionEnabled;
       correctionToggle.classList.toggle('active', correctionEnabled);
       localStorage.setItem('synesthesia-correction-enabled', correctionEnabled);
@@ -1254,45 +1250,16 @@
       }
     };
 
-    // Close button - turns off correction mode
-    correctionPanelClose.onclick = () => {
-      correctionEnabled = false;
-      correctionToggle.classList.remove('active');
-      localStorage.setItem('synesthesia-correction-enabled', 'false');
-      hideCorrectionPanel();
-    };
-
-    // Check & Correct button
-    correctionCheckBtn.onclick = () => {
-      const text = correctionInputText.value;
-      if (text.trim()) {
-        requestCorrection(text);
-      }
-    };
-
-    // Send as-is button
-    correctionSendBtn.onclick = () => {
-      const text = correctionInputText.value;
-      sendToTerminal(text);
-    };
-
-    // Accept button (in result state)
-    correctionAcceptBtn.onclick = () => {
-      if (pendingCorrection) {
-        sendToTerminal(pendingCorrection.corrected);
-      }
-    };
-
-    // Edit button (in result state) - return to input state
-    correctionEditBtn.onclick = () => {
-      correctionInputText.value = inputBuffer;
-      pendingCorrection = null;
-      showInputState();
-    };
-
     // Textarea keyboard handling (input state)
     correctionInputText.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
+      if (e.key === 'Enter' && e.metaKey) {
+        // Cmd+Enter: send directly without correction
+        e.preventDefault();
+        const text = correctionInputText.value;
+        if (text.trim()) {
+          sendToTerminal(text);
+        }
+      } else if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         const text = correctionInputText.value;
         if (text.trim()) {
@@ -1300,9 +1267,7 @@
         }
       } else if (e.key === 'Escape') {
         e.preventDefault();
-        // Drop all text
-        correctionInputText.value = '';
-        inputBuffer = '';
+        hideCorrectionPanel();
       }
     });
 
@@ -1320,11 +1285,16 @@
         }
       } else if (e.key === 'Escape') {
         e.preventDefault();
-        // Cancel checking or go back to edit
-        waitingForCorrection = false;
-        correctionInputText.value = inputBuffer;
-        pendingCorrection = null;
-        showInputState();
+        if (waitingForCorrection) {
+          // Cancel checking - return to input
+          waitingForCorrection = false;
+          correctionInputText.value = inputBuffer;
+          pendingCorrection = null;
+          showInputState();
+        } else if (pendingCorrection) {
+          // Send original text without corrections
+          sendToTerminal(pendingCorrection.original);
+        }
       }
     });
 
@@ -1427,16 +1397,21 @@
               break;
 
             case 'session-switched':
+              saveCorrectionState();
               activeSessionId = msg.id;
               updateTabs();
               term.clear();
+              restoreCorrectionState(msg.id);
               term.focus();
               // Send terminal size after switching sessions
               sendResize();
+              // Scroll to bottom after history replay completes
+              setTimeout(() => term.scrollToBottom(), 150);
               break;
 
             case 'session-closed': {
               sessions.delete(msg.id);
+              correctionStates.delete(msg.id);
               const tab = document.querySelector(`.tab[data-session-id="${msg.id}"]`);
               if (tab) tab.remove();
               break;
@@ -1545,6 +1520,7 @@
     window.addEventListener('resize', () => {
       fitAddon.fit();
       sendResize();
+      requestAnimationFrame(() => term.scrollToBottom());
     });
 
     // New tab button
@@ -1591,21 +1567,21 @@
       // ===== DARK THEMES =====
       synesthesia: {
         background: '#1a1a2e', foreground: '#e2e8f0', cursor: '#e94560', selection: '#e94560',
-        black: '#1a1a2e', red: '#ef4444', green: '#22c55e', yellow: '#eab308',
+        black: '#94a3b8', red: '#ef4444', green: '#22c55e', yellow: '#eab308',
         blue: '#3b82f6', magenta: '#a855f7', cyan: '#06b6d4', white: '#e2e8f0',
         brightBlack: '#94a3b8', header: '#16213e', tabbar: '#0f1729', activeTab: '#1a1a2e', accent: '#e94560',
         keyword: '#c084fc', string: '#4ade80', number: '#fbbf24', command: '#60a5fa'
       },
       dracula: {
         background: '#282a36', foreground: '#f8f8f2', cursor: '#f8f8f2', selection: '#44475a',
-        black: '#21222c', red: '#ff5555', green: '#50fa7b', yellow: '#f1fa8c',
+        black: '#6272a4', red: '#ff5555', green: '#50fa7b', yellow: '#f1fa8c',
         blue: '#bd93f9', magenta: '#ff79c6', cyan: '#8be9fd', white: '#f8f8f2',
         brightBlack: '#6272a4', header: '#1e1f29', tabbar: '#191a21', activeTab: '#282a36', accent: '#bd93f9',
         keyword: '#ff79c6', string: '#f1fa8c', number: '#bd93f9', command: '#8be9fd'
       },
       tokyoNight: {
         background: '#1a1b26', foreground: '#c0caf5', cursor: '#c0caf5', selection: '#33467c',
-        black: '#15161e', red: '#f7768e', green: '#9ece6a', yellow: '#e0af68',
+        black: '#565f89', red: '#f7768e', green: '#9ece6a', yellow: '#e0af68',
         blue: '#7aa2f7', magenta: '#bb9af7', cyan: '#7dcfff', white: '#c0caf5',
         brightBlack: '#565f89', header: '#13141c', tabbar: '#0f1016', activeTab: '#1a1b26', accent: '#7aa2f7',
         keyword: '#bb9af7', string: '#9ece6a', number: '#ff9e64', command: '#7aa2f7'
@@ -1626,14 +1602,14 @@
       },
       synthwave: {
         background: '#2a2139', foreground: '#f0eff1', cursor: '#ff7edb', selection: '#463465',
-        black: '#241b2f', red: '#fe4450', green: '#72f1b8', yellow: '#fede5d',
+        black: '#848bbd', red: '#fe4450', green: '#72f1b8', yellow: '#fede5d',
         blue: '#36f9f6', magenta: '#ff7edb', cyan: '#36f9f6', white: '#f0eff1',
         brightBlack: '#848bbd', header: '#1e1729', tabbar: '#171320', activeTab: '#2a2139', accent: '#ff7edb',
         keyword: '#ff7edb', string: '#72f1b8', number: '#f97e72', command: '#36f9f6'
       },
       cyberpunk: {
         background: '#0d0221', foreground: '#0abdc6', cursor: '#ea00d9', selection: '#711c91',
-        black: '#091833', red: '#ff003c', green: '#00ff9f', yellow: '#ffd700',
+        black: '#708090', red: '#ff003c', green: '#00ff9f', yellow: '#ffd700',
         blue: '#0abdc6', magenta: '#ea00d9', cyan: '#00ffc8', white: '#d7d7d5',
         brightBlack: '#708090', header: '#190535', tabbar: '#0d0221', activeTab: '#1a0a3e', accent: '#ea00d9',
         keyword: '#ea00d9', string: '#00ff9f', number: '#ffd700', command: '#0abdc6'
@@ -1647,28 +1623,28 @@
       },
       gruvbox: {
         background: '#282828', foreground: '#ebdbb2', cursor: '#ebdbb2', selection: '#504945',
-        black: '#282828', red: '#fb4934', green: '#b8bb26', yellow: '#fabd2f',
+        black: '#928374', red: '#fb4934', green: '#b8bb26', yellow: '#fabd2f',
         blue: '#83a598', magenta: '#d3869b', cyan: '#8ec07c', white: '#ebdbb2',
         brightBlack: '#928374', header: '#1d2021', tabbar: '#171a1a', activeTab: '#282828', accent: '#fe8019',
         keyword: '#fb4934', string: '#b8bb26', number: '#d3869b', command: '#83a598'
       },
       ayuDark: {
         background: '#0b0e14', foreground: '#bfbdb6', cursor: '#e6b450', selection: '#273747',
-        black: '#0b0e14', red: '#f07178', green: '#aad94c', yellow: '#e6b450',
+        black: '#6c7380', red: '#f07178', green: '#aad94c', yellow: '#e6b450',
         blue: '#59c2ff', magenta: '#d2a6ff', cyan: '#95e6cb', white: '#bfbdb6',
         brightBlack: '#6c7380', header: '#0d1017', tabbar: '#07090d', activeTab: '#0b0e14', accent: '#e6b450',
         keyword: '#ff8f40', string: '#aad94c', number: '#d2a6ff', command: '#59c2ff'
       },
       oneDark: {
         background: '#282c34', foreground: '#abb2bf', cursor: '#528bff', selection: '#3e4451',
-        black: '#282c34', red: '#e06c75', green: '#98c379', yellow: '#e5c07b',
+        black: '#5c6370', red: '#e06c75', green: '#98c379', yellow: '#e5c07b',
         blue: '#61afef', magenta: '#c678dd', cyan: '#56b6c2', white: '#abb2bf',
         brightBlack: '#5c6370', header: '#21252b', tabbar: '#1b1e24', activeTab: '#282c34', accent: '#61afef',
         keyword: '#c678dd', string: '#98c379', number: '#d19a66', command: '#61afef'
       },
       monokai: {
         background: '#272822', foreground: '#f8f8f2', cursor: '#f8f8f0', selection: '#49483e',
-        black: '#272822', red: '#f92672', green: '#a6e22e', yellow: '#f4bf75',
+        black: '#75715e', red: '#f92672', green: '#a6e22e', yellow: '#f4bf75',
         blue: '#66d9ef', magenta: '#ae81ff', cyan: '#a1efe4', white: '#f8f8f2',
         brightBlack: '#75715e', header: '#1e1f1c', tabbar: '#171814', activeTab: '#272822', accent: '#f92672',
         keyword: '#f92672', string: '#e6db74', number: '#ae81ff', command: '#66d9ef'
@@ -1864,11 +1840,16 @@
         newTabBtn.style.color = mutedText;
       }
 
-      // Update correction panel
+      // Update correction panel (semi-transparent)
       const correctionPanel = document.getElementById('correction-panel');
       if (correctionPanel) {
-        correctionPanel.style.background = theme.header || buttonBg;
-        correctionPanel.style.borderColor = theme.accent || theme.blue;
+        const panelColor = theme.header || buttonBg;
+        const hex = panelColor.replace('#', '');
+        const pr = parseInt(hex.substr(0, 2), 16);
+        const pg = parseInt(hex.substr(2, 2), 16);
+        const pb = parseInt(hex.substr(4, 2), 16);
+        correctionPanel.style.background = `rgba(${pr}, ${pg}, ${pb}, 0.75)`;
+        correctionPanel.style.borderColor = buttonBorder;
       }
 
       // Update highlighter colors
@@ -1977,6 +1958,7 @@
       term.options.fontSize = fontSize;
       term.options.lineHeight = lineHeight;
       fitAddon.fit();
+      requestAnimationFrame(() => term.scrollToBottom());
       localStorage.setItem('synesthesia-font-settings', JSON.stringify({ fontSize, lineHeight }));
     }
 
