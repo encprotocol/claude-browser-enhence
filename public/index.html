@@ -67,6 +67,7 @@
       font-size: 12px;
       cursor: pointer;
       transition: all 0.15s;
+      position: relative;
     }
     .correction-toggle:hover {
       opacity: 0.85;
@@ -75,6 +76,30 @@
       background: #166534;
       border-color: #22c55e;
       color: #22c55e;
+    }
+    .correction-toggle.warning {
+      border-color: #f59e0b;
+      animation: shake 0.4s ease;
+    }
+    .correction-toggle.warning::after {
+      content: attr(data-warning);
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #78350f;
+      color: #fbbf24;
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 100;
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-3px); }
+      40%, 80% { transform: translateX(3px); }
     }
     .correction-toggle .toggle-icon {
       font-weight: bold;
@@ -1209,12 +1234,10 @@
 
     correctionCopyBtn.addEventListener('click', copyCorrectedText);
 
-    // Initialize correction toggle state
-    // Restore correction mode state on load
-    if (correctionEnabled) {
-      correctionToggle.classList.add('active');
-      // Don't auto-show popup on page load - let user toggle
-    }
+    // Don't auto-restore correction mode on page load - require explicit re-enable
+    // (which triggers the Claude process check)
+    correctionEnabled = false;
+    localStorage.removeItem('synesthesia-correction-enabled');
 
     function escapeHtml(text) {
       return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -1278,6 +1301,20 @@
       }));
     }
 
+    // Show warning on correction toggle button
+    function showCorrectionWarning(message) {
+      correctionToggle.setAttribute('data-warning', message);
+      correctionToggle.classList.add('warning');
+      // Re-trigger shake animation
+      correctionToggle.style.animation = 'none';
+      correctionToggle.offsetHeight; // force reflow
+      correctionToggle.style.animation = '';
+      setTimeout(() => {
+        correctionToggle.classList.remove('warning');
+        correctionToggle.removeAttribute('data-warning');
+      }, 3000);
+    }
+
     // Toggle correction mode
     correctionToggle.onclick = () => {
       // If correction is enabled but panel was dismissed with Esc, just re-show it
@@ -1285,14 +1322,20 @@
         showCorrectionPanel();
         return;
       }
-      correctionEnabled = !correctionEnabled;
-      correctionToggle.classList.toggle('active', correctionEnabled);
-      localStorage.setItem('synesthesia-correction-enabled', correctionEnabled);
 
       if (correctionEnabled) {
-        showCorrectionPanel();
-      } else {
+        // Disabling - do immediately
+        correctionEnabled = false;
+        correctionToggle.classList.remove('active');
+        localStorage.setItem('synesthesia-correction-enabled', 'false');
         hideCorrectionPanel();
+      } else {
+        // Enabling - check if Claude is running first
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'check-claude-running' }));
+        } else {
+          showCorrectionWarning('Not connected to server');
+        }
       }
     };
 
@@ -1519,6 +1562,17 @@
               if (msg.sessionId === activeSessionId) {
                 // Error - send original text
                 sendToTerminal(inputBuffer);
+              }
+              break;
+
+            case 'claude-running-status':
+              if (msg.running) {
+                correctionEnabled = true;
+                correctionToggle.classList.add('active');
+                localStorage.setItem('synesthesia-correction-enabled', 'true');
+                showCorrectionPanel();
+              } else {
+                showCorrectionWarning('Run claude in a terminal first');
               }
               break;
 

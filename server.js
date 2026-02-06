@@ -1,6 +1,6 @@
 const express = require('express');
 const { WebSocketServer } = require('ws');
-const { spawn } = require('child_process');
+const { spawn, execSync } = require('child_process');
 const pty = require('node-pty');
 const path = require('path');
 
@@ -35,6 +35,23 @@ function getOrCreateClientData(clientId) {
   const data = clientSessions.get(clientId);
   data.lastSeen = Date.now();
   return data;
+}
+
+// Check if any PTY session has a claude child process
+function isClaudeRunningInSessions(sessions) {
+  const pids = [];
+  for (const session of sessions.values()) {
+    if (session.pty && session.pty.pid) {
+      pids.push(session.pty.pid);
+    }
+  }
+  if (pids.length === 0) return false;
+  try {
+    execSync(`pgrep -f -P ${pids.join(',')} claude`, { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // Clean up old client data periodically
@@ -227,6 +244,12 @@ wss.on('connection', (ws, req) => {
             session.name = msg.name;
             sendMessage('session-renamed', { id: msg.sessionId, name: msg.name });
           }
+          break;
+        }
+
+        case 'check-claude-running': {
+          const running = isClaudeRunningInSessions(sessions);
+          sendMessage('claude-running-status', { running });
           break;
         }
 
