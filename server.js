@@ -8,7 +8,23 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+app.post('/api/upload', (req, res) => {
+  try {
+    const { name, data } = req.body;
+    if (!name || !data) return res.status(400).json({ error: 'Missing name or data' });
+    const safeName = name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const filename = Date.now() + '-' + safeName;
+    const dir = path.join(__dirname, 'public', 'uploads');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, filename), Buffer.from(data, 'base64'));
+    res.json({ url: '/uploads/' + filename });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 app.get('/api/file', (req, res) => {
   const homeDir = process.env.HOME || '/tmp';

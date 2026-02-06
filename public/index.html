@@ -383,6 +383,389 @@
     .settings-close:hover {
       color: var(--theme-fg, #e2e8f0);
     }
+    /* === Todo Modal === */
+    .todo-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    .todo-modal.visible {
+      display: flex;
+    }
+    .todo-panel {
+      background: var(--theme-header, #1e293b);
+      border: 1px solid var(--theme-button-border, #334155);
+      border-radius: 12px;
+      padding: 24px;
+      width: 420px;
+      max-width: 90vw;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    .todo-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .todo-header h2 {
+      color: var(--theme-fg, #e2e8f0);
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .todo-close {
+      background: none;
+      border: none;
+      color: var(--theme-muted, #64748b);
+      font-size: 24px;
+      cursor: pointer;
+      padding: 4px;
+    }
+    .todo-close:hover {
+      color: var(--theme-fg, #e2e8f0);
+    }
+    .todo-input-row {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .todo-input-row input {
+      flex: 1;
+      background: var(--theme-bg, #1a1a2e);
+      border: 1px solid var(--theme-button-border, #334155);
+      border-radius: 6px;
+      color: var(--theme-fg, #e2e8f0);
+      padding: 6px 10px;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+    }
+    .todo-input-row input:focus {
+      border-color: var(--theme-accent, #e94560);
+    }
+    .todo-input-row button {
+      background: var(--theme-accent, #e94560);
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      font-size: 18px;
+      width: 34px;
+      cursor: pointer;
+    }
+    .todo-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 4px;
+      border-radius: 4px;
+    }
+    .todo-item:hover {
+      background: rgba(255,255,255,0.04);
+    }
+    .todo-checkbox {
+      accent-color: var(--theme-accent, #e94560);
+      cursor: pointer;
+    }
+    .todo-text {
+      flex: 1;
+      color: var(--theme-fg, #e2e8f0);
+      font-size: 14px;
+    }
+    .todo-item.done .todo-text {
+      text-decoration: line-through;
+      opacity: 0.5;
+    }
+    .todo-delete {
+      background: none;
+      border: none;
+      color: var(--theme-muted, #64748b);
+      font-size: 16px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s;
+      padding: 0 4px;
+    }
+    .todo-item:hover .todo-delete {
+      opacity: 1;
+    }
+    .todo-delete:hover {
+      color: var(--theme-accent, #e94560);
+    }
+    /* === Notes Modal === */
+    .notes-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    .notes-modal.visible {
+      display: flex;
+    }
+    .notes-panel {
+      background: var(--theme-header, #1e293b);
+      border: 1px solid var(--theme-button-border, #334155);
+      border-radius: 12px;
+      padding: 24px;
+      width: 960px;
+      max-width: 90vw;
+      height: 80vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .notes-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-shrink: 0;
+    }
+    .notes-header h2 {
+      color: var(--theme-fg, #e2e8f0);
+      font-size: 18px;
+      font-weight: 600;
+      flex: 1;
+    }
+    .notes-close {
+      background: none;
+      border: none;
+      color: var(--theme-muted, #64748b);
+      font-size: 24px;
+      cursor: pointer;
+      padding: 4px;
+    }
+    .notes-close:hover {
+      color: var(--theme-fg, #e2e8f0);
+    }
+    .notes-add-btn {
+      background: var(--theme-accent, #e94560);
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      font-size: 16px;
+      width: 28px;
+      height: 28px;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .notes-tiles {
+      flex: 1;
+      overflow-y: auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+      align-content: start;
+    }
+    .notes-empty {
+      color: var(--theme-muted, #64748b);
+      font-size: 13px;
+      padding: 8px 0;
+      grid-column: 1 / -1;
+    }
+    .notes-tile {
+      background: var(--theme-bg, #1a1a2e);
+      border: 1px solid var(--theme-button-border, #334155);
+      border-radius: 8px;
+      padding: 12px;
+      cursor: pointer;
+      position: relative;
+      transition: border-color 0.15s;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .notes-tile:hover {
+      border-color: var(--theme-accent, #e94560);
+    }
+    .notes-tile-title {
+      color: var(--theme-fg, #e2e8f0);
+      font-size: 14px;
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .notes-tile-preview {
+      color: var(--theme-muted, #94a3b8);
+      font-size: 12px;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      white-space: pre-wrap;
+    }
+    .notes-tile-thumbs {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      margin-top: 2px;
+    }
+    .notes-tile-thumb {
+      width: 48px;
+      height: 48px;
+      object-fit: cover;
+      border-radius: 4px;
+      border: 1px solid var(--theme-button-border, #334155);
+    }
+    .notes-tile-thumb-more {
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      background: var(--theme-header, #1e293b);
+      border: 1px solid var(--theme-button-border, #334155);
+      color: var(--theme-muted, #94a3b8);
+      font-size: 12px;
+    }
+    .notes-tile-delete {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      background: none;
+      border: none;
+      color: var(--theme-muted, #64748b);
+      font-size: 16px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s;
+      padding: 2px 5px;
+    }
+    .notes-tile:hover .notes-tile-delete {
+      opacity: 1;
+    }
+    .notes-tile-delete:hover {
+      color: var(--theme-accent, #e94560);
+    }
+    .notes-editor {
+      position: absolute;
+      inset: 0;
+      background: var(--theme-header, #1e293b);
+      border-radius: 12px;
+      padding: 24px;
+      display: none;
+      flex-direction: column;
+      z-index: 1;
+    }
+    .notes-editor.visible {
+      display: flex;
+    }
+    .notes-editor-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      flex-shrink: 0;
+    }
+    .notes-editor-toolbar-right {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .notes-editor-hint {
+      color: var(--theme-muted, #64748b);
+      font-size: 12px;
+    }
+    .notes-editor-btn {
+      background: none;
+      border: 1px solid var(--theme-button-border, #334155);
+      border-radius: 6px;
+      color: var(--theme-muted, #94a3b8);
+      font-size: 13px;
+      padding: 4px 10px;
+      cursor: pointer;
+    }
+    .notes-editor-btn:hover {
+      color: var(--theme-fg, #e2e8f0);
+      border-color: var(--theme-fg, #e2e8f0);
+    }
+    .notes-editor-delete:hover {
+      color: var(--theme-accent, #e94560);
+      border-color: var(--theme-accent, #e94560);
+    }
+    .notes-edit-title {
+      width: 100%;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--theme-button-border, #334155);
+      color: var(--theme-fg, #e2e8f0);
+      font-size: 16px;
+      font-weight: 600;
+      padding: 6px 2px;
+      margin-bottom: 10px;
+      outline: none;
+      font-family: inherit;
+      flex-shrink: 0;
+    }
+    .notes-edit-title:focus {
+      border-color: var(--theme-accent, #e94560);
+    }
+    .notes-textarea {
+      width: 100%;
+      background: var(--theme-bg, #1a1a2e);
+      border: 1px solid var(--theme-button-border, #334155);
+      border-radius: 6px;
+      color: var(--theme-fg, #e2e8f0);
+      padding: 10px;
+      font-size: 14px;
+      font-family: 'JetBrains Mono', monospace;
+      resize: none;
+      outline: none;
+      flex: 1;
+      min-height: 0;
+    }
+    .notes-textarea:focus {
+      border-color: var(--theme-accent, #e94560);
+    }
+    .notes-editor-body {
+      flex: 1;
+      display: flex;
+      gap: 16px;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .notes-editor-body .notes-textarea {
+      flex: 1;
+      min-width: 0;
+    }
+    .notes-edit-images {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      overflow-y: auto;
+      min-width: 0;
+      padding: 10px;
+      background: var(--theme-bg, #1a1a2e);
+      border: 1px solid var(--theme-button-border, #334155);
+      border-radius: 6px;
+    }
+    .notes-edit-images:empty {
+      display: none;
+    }
+    .notes-preview-text {
+      color: var(--theme-fg, #e2e8f0);
+      font-size: 14px;
+      font-family: 'JetBrains Mono', monospace;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .notes-edit-images img {
+      max-width: 100%;
+      object-fit: contain;
+      border-radius: 6px;
+      border: 1px solid var(--theme-button-border, #334155);
+    }
     .settings-section {
       margin-bottom: 24px;
     }
@@ -995,6 +1378,8 @@
         <span class="toggle-icon">Aa</span>
         <span class="toggle-label">Correction</span>
       </button>
+      <button id="todo-toggle" class="settings-btn" title="Todos (⌘J)">☑</button>
+      <button id="notes-toggle" class="settings-btn" title="Notes (⌘K)">📝</button>
       <button id="file-browser-toggle" class="settings-btn" title="File Browser (Cmd+B)">📁</button>
       <button id="settings-btn" class="settings-btn" title="Theme Settings">⚙</button>
       <div class="status">
@@ -1197,6 +1582,47 @@
     </div>
   </div>
 
+  <div id="todo-modal" class="todo-modal">
+    <div class="todo-panel">
+      <div class="todo-header">
+        <h2>Todos</h2>
+        <button id="todo-close" class="todo-close">&times;</button>
+      </div>
+      <div class="todo-input-row">
+        <input type="text" id="todo-input" placeholder="Add a task..." />
+        <button id="todo-add">+</button>
+      </div>
+      <div id="todo-list"></div>
+    </div>
+  </div>
+
+  <div id="notes-modal" class="notes-modal">
+    <div class="notes-panel">
+      <div class="notes-header">
+        <h2>Notes</h2>
+        <button id="notes-add-btn" class="notes-add-btn" title="New note">+</button>
+        <button id="notes-close" class="notes-close">&times;</button>
+      </div>
+      <div id="notes-tiles" class="notes-tiles"></div>
+      <div id="notes-editor" class="notes-editor">
+        <div class="notes-editor-toolbar">
+          <button id="notes-edit-back" class="notes-editor-btn" title="Back (Esc)">&larr; Back</button>
+          <span class="notes-editor-hint">Esc to close &middot; Paste images with ⌘V</span>
+          <div class="notes-editor-toolbar-right">
+            <button id="notes-edit-upload" class="notes-editor-btn" title="Attach file">📎</button>
+            <input type="file" id="notes-file-input" style="display:none" multiple />
+            <button id="notes-edit-delete" class="notes-editor-btn notes-editor-delete" title="Delete note">Delete</button>
+          </div>
+        </div>
+        <input type="text" id="notes-edit-title" class="notes-edit-title" placeholder="Note title..." />
+        <div class="notes-editor-body">
+          <textarea id="notes-edit-content" class="notes-textarea" placeholder="Write here... (paste images with ⌘V)"></textarea>
+          <div id="notes-edit-images" class="notes-edit-images"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="main-area">
     <div id="terminal-container">
       <div id="terminal"></div>
@@ -1254,6 +1680,8 @@
   <script src="highlighter.js"></script>
   <script src="diff.js"></script>
   <script src="filebrowser.js"></script>
+  <script src="todo.js"></script>
+  <script src="notes.js"></script>
   <script>
     // Load saved font settings
     const savedFontSettings = JSON.parse(localStorage.getItem('synesthesia-font-settings')) || {
@@ -2107,6 +2535,18 @@
         correctionToggle.click();
         return;
       }
+      // Cmd+J: Toggle todos
+      if (e.metaKey && e.key === 'j') {
+        e.preventDefault();
+        TodoPanel.toggle();
+        return;
+      }
+      // Cmd+K: Toggle notes
+      if (e.metaKey && e.key === 'k') {
+        e.preventDefault();
+        NotesPanel.toggle();
+        return;
+      }
       // Ctrl+Shift+T: New tab
       if (e.ctrlKey && e.shiftKey && e.key === 'T') {
         e.preventDefault();
@@ -2478,6 +2918,18 @@
         fileBrowserToggle.style.borderColor = buttonBorder;
         fileBrowserToggle.style.color = mutedText;
       }
+      const todoToggle = document.getElementById('todo-toggle');
+      if (todoToggle) {
+        todoToggle.style.background = buttonBg;
+        todoToggle.style.borderColor = buttonBorder;
+        todoToggle.style.color = mutedText;
+      }
+      const notesToggle = document.getElementById('notes-toggle');
+      if (notesToggle) {
+        notesToggle.style.background = buttonBg;
+        notesToggle.style.borderColor = buttonBorder;
+        notesToggle.style.color = mutedText;
+      }
       if (newTabBtn) {
         newTabBtn.style.background = 'transparent';
         newTabBtn.style.borderColor = buttonBorder;
@@ -2653,6 +3105,12 @@
 
     // Apply saved theme on load
     applyTheme(currentTheme);
+
+    // Init todo & notes panels
+    TodoPanel.init();
+    NotesPanel.init();
+    document.getElementById('todo-toggle').addEventListener('click', () => TodoPanel.toggle());
+    document.getElementById('notes-toggle').addEventListener('click', () => NotesPanel.toggle());
 
     // Start connection
     connect();
