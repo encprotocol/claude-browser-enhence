@@ -2,6 +2,8 @@
 
 A browser-based terminal emulator with automatic syntax highlighting, file management, notes, and AI-powered English correction. Built with xterm.js, WebSockets, and node-pty.
 
+![Synesthesia Web Terminal](assets/screenshot.png)
+
 ## Features
 
 - **Auto-detecting keyword colorization** — Automatically highlights patterns in terminal output:
