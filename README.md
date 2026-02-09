@@ -31,7 +31,11 @@ A browser-based terminal emulator with automatic syntax highlighting, file manag
   - Editor with left=textarea, right=rendered preview (text + images)
   - Paste images from clipboard or upload files via button
   - Server-side persistence; uploaded images cleaned up on note deletion
-- **English correction** — Toggle correction mode (`Cmd+X`) to type in a dedicated panel, check grammar/spelling via Claude AI (Haiku model), review word-level diffs, then accept or edit before sending to the terminal. **Requires [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed and authenticated on the server.**
+- **English correction** — Toggle correction mode (`Cmd+X`) to type in a dedicated panel, review word-level diffs, then accept or edit before sending to the terminal. Two modes configurable in Settings → Grammar:
+  - **Grammar**: Fix spelling and grammar errors only
+  - **Polish**: Improve expression while preserving meaning
+  - Uses Claude AI (Haiku model). **Requires [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed and authenticated on the server.**
+- **Tabbed settings panel** — Settings organized into Theme and Grammar tabs
 - **Theme support** — 27 built-in themes plus full color customization via settings panel:
   - **Dark**: Synesthesia, Dracula, Tokyo Night, Catppuccin, Rosé Pine, Synthwave '84, Cyberpunk, Nord, Gruvbox, Ayu Dark, One Dark, Monokai, Tinacious Design
   - **Soft**: Catppuccin Frappé, Catppuccin Macchiato, Everforest Dark, Palenight, Kanagawa, Rosé Pine Moon, Everforest Light
@@ -43,9 +47,9 @@ A browser-based terminal emulator with automatic syntax highlighting, file manag
 
 ## Tech Stack
 
-- **Frontend**: xterm.js, vanilla JS/CSS
+- **Frontend**: React, TypeScript, Vite, Zustand, xterm.js
 - **Backend**: Node.js, Express, WebSocket (ws), node-pty
-- **Testing**: Jest
+- **Testing**: Vitest
 - **AI**: Claude Code CLI (for English correction)
 
 ## Getting Started
@@ -75,19 +79,19 @@ npm test
 
 ```
 ├── server.js              # Express + WebSocket server, PTY management, REST API
+├── src/
+│   ├── main.tsx           # React entry point
+│   ├── App.tsx            # Root component
+│   ├── types/index.ts     # Shared TypeScript types
+│   ├── stores/            # Zustand stores (8 stores + messageRouter)
+│   ├── lib/               # Utilities (diff, highlighter, colorUtils, themes, api)
+│   ├── hooks/             # Custom hooks (useKeyboardShortcuts)
+│   ├── components/        # React components (Header, Terminal, FileBrowser, Modals)
+│   ├── terminal/          # Terminal singleton instance
+│   └── styles/index.css   # All styles
 ├── public/
-│   ├── index.html         # Terminal UI (xterm.js, tabs, themes, settings, dialogs)
-│   ├── highlighter.js     # Auto-detecting keyword colorizer (ANSI patterns)
-│   ├── diff.js            # Word-level diff (LCS) for correction display
-│   ├── filebrowser.js     # File browser sidebar (directory tree, viewer, markdown preview)
-│   ├── todo.js            # Todo panel (checklist CRUD)
-│   └── notes.js           # Notes panel (tiles, editor, image upload)
+│   └── index.html         # Legacy monolithic SPA (still present)
 ├── data/                  # Server-side persistent storage (todos, notes JSON)
-├── __tests__/
-│   ├── highlighter.test.js
-│   ├── diff.test.js
-│   ├── server.test.js
-│   └── integration.test.js
 └── package.json
 ```
 

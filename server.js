@@ -9,7 +9,10 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json({ limit: '50mb' }));
-app.use(express.static(path.join(__dirname, 'public')));
+const clientDir = process.env.NODE_ENV === 'production'
+  ? path.join(__dirname, 'dist')
+  : path.join(__dirname, 'public');
+app.use(express.static(clientDir));
 
 // --- Persistent JSON store ---
 const DATA_DIR = path.join(__dirname, 'data');
@@ -351,8 +354,10 @@ wss.on('connection', (ws, req) => {
         }
 
         case 'correct-english': {
-          const { text, sessionId } = msg;
-          const prompt = `Fix grammar and improve this English text. Rules: Do NOT capitalize the first letter if the original doesn't. Do NOT add trailing punctuation (period, comma, etc.) if the original doesn't have it. Only fix actual grammar and spelling errors. Return ONLY the corrected text, nothing else:\n\n${text}`;
+          const { text, sessionId, mode } = msg;
+          const prompt = mode === 'polish'
+            ? `Improve this English text to sound more natural and polished while keeping the same meaning. Fix any grammar or spelling errors too. Rules: Do NOT capitalize the first letter if the original doesn't. Do NOT add trailing punctuation if the original doesn't have it. Return ONLY the improved text, nothing else:\n\n${text}`
+            : `Fix grammar and improve this English text. Rules: Do NOT capitalize the first letter if the original doesn't. Do NOT add trailing punctuation (period, comma, etc.) if the original doesn't have it. Only fix actual grammar and spelling errors. Return ONLY the corrected text, nothing else:\n\n${text}`;
 
           // Use Haiku model for fast corrections
           const claude = spawn('claude', ['-p', prompt, '--model', 'haiku'], {
