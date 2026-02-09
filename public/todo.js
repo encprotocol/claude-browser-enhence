@@ -1,32 +1,20 @@
 window.TodoPanel = (function() {
-  const STORAGE_KEY = 'synesthesia-todo-data';
-  let modal, todoInput, todoAddBtn, todoList, closeBtn;
-  let data = [];
+  var modal, todoInput, todoAddBtn, todoList, closeBtn;
+  var data = [];
 
   function load() {
-    try {
-      var raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        data = JSON.parse(raw);
-      } else {
-        // Migrate from old combined storage
-        var old = localStorage.getItem('synesthesia-notes-data');
-        if (old) {
-          var parsed = JSON.parse(old);
-          if (parsed.todos && parsed.todos.length) {
-            data = parsed.todos;
-            save();
-          }
-        }
-      }
-    } catch (e) {
-      data = [];
-    }
-    if (!Array.isArray(data)) data = [];
+    return fetch('/api/todos')
+      .then(function(r) { return r.json(); })
+      .then(function(arr) { data = Array.isArray(arr) ? arr : []; })
+      .catch(function() { data = []; });
   }
 
   function save() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    fetch('/api/todos', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).catch(function() {});
   }
 
   function renderTodos() {
@@ -97,8 +85,7 @@ window.TodoPanel = (function() {
     todoList = document.getElementById('todo-list');
     closeBtn = document.getElementById('todo-close');
 
-    load();
-    renderTodos();
+    load().then(function() { renderTodos(); });
 
     todoAddBtn.addEventListener('click', function() {
       addTodo(todoInput.value);

@@ -383,6 +383,76 @@
     .settings-close:hover {
       color: var(--theme-fg, #e2e8f0);
     }
+    /* === Prompt Dialog === */
+    .prompt-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 300;
+      align-items: center;
+      justify-content: center;
+    }
+    .prompt-overlay.visible {
+      display: flex;
+    }
+    .prompt-box {
+      background: var(--theme-header, #1e293b);
+      border: 1px solid var(--theme-button-border, #334155);
+      border-radius: 10px;
+      padding: 20px 24px;
+      width: 340px;
+      max-width: 90vw;
+    }
+    .prompt-box h3 {
+      color: var(--theme-fg, #e2e8f0);
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    .prompt-box input {
+      width: 100%;
+      background: var(--theme-bg, #1a1a2e);
+      border: 1px solid var(--theme-button-border, #334155);
+      border-radius: 6px;
+      color: var(--theme-fg, #e2e8f0);
+      padding: 8px 10px;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      margin-bottom: 14px;
+    }
+    .prompt-box input:focus {
+      border-color: var(--theme-accent, #e94560);
+    }
+    .prompt-buttons {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .prompt-btn {
+      border: 1px solid var(--theme-button-border, #334155);
+      border-radius: 6px;
+      padding: 6px 16px;
+      font-size: 13px;
+      cursor: pointer;
+      background: none;
+      color: var(--theme-muted, #94a3b8);
+    }
+    .prompt-btn:hover {
+      color: var(--theme-fg, #e2e8f0);
+      border-color: var(--theme-fg, #e2e8f0);
+    }
+    .prompt-btn-primary {
+      background: var(--theme-accent, #e94560);
+      border-color: var(--theme-accent, #e94560);
+      color: #fff;
+    }
+    .prompt-btn-primary:hover {
+      opacity: 0.9;
+      color: #fff;
+      border-color: var(--theme-accent, #e94560);
+    }
     /* === Todo Modal === */
     .todo-modal {
       display: none;
@@ -1426,6 +1496,7 @@
           <button class="preset-btn" data-theme="ayuDark">Ayu Dark</button>
           <button class="preset-btn" data-theme="oneDark">One Dark</button>
           <button class="preset-btn" data-theme="monokai">Monokai</button>
+          <button class="preset-btn" data-theme="tinaciousDesign">Tinacious Design</button>
         </div>
       </div>
 
@@ -1451,6 +1522,7 @@
           <button class="preset-btn" data-theme="solarizedLight">Solarized Light</button>
           <button class="preset-btn" data-theme="catppuccinLatte">Catppuccin Latte</button>
           <button class="preset-btn" data-theme="rosePineDawn">Rosé Pine Dawn</button>
+          <button class="preset-btn" data-theme="tinaciousDesignLight">Tinacious Design Light</button>
         </div>
       </div>
 
@@ -1578,6 +1650,17 @@
 
       <div class="settings-actions">
         <button class="btn btn-secondary" id="settings-reset">Reset to Default</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="prompt-overlay" class="prompt-overlay">
+    <div class="prompt-box">
+      <h3 id="prompt-title"></h3>
+      <input type="text" id="prompt-input" />
+      <div class="prompt-buttons">
+        <button id="prompt-cancel" class="prompt-btn">Cancel</button>
+        <button id="prompt-ok" class="prompt-btn prompt-btn-primary">OK</button>
       </div>
     </div>
   </div>
@@ -2272,10 +2355,11 @@
       // Double-click to rename
       nameSpan.ondblclick = (e) => {
         e.stopPropagation();
-        const newName = prompt('Rename session:', name);
-        if (newName && newName.trim()) {
-          renameSession(id, newName.trim());
-        }
+        showPrompt('Rename tab:', name).then(function(newName) {
+          if (newName !== null && newName.trim()) {
+            renameSession(id, newName.trim());
+          }
+        });
       };
 
       tabBar.insertBefore(tab, newTabBtn);
@@ -2296,13 +2380,83 @@
       ws.send(JSON.stringify({ type: 'switch-session', sessionId: id }));
     }
 
+    // Themed prompt dialog
+    const promptOverlay = document.getElementById('prompt-overlay');
+    const promptTitle = document.getElementById('prompt-title');
+    const promptInput = document.getElementById('prompt-input');
+    const promptOk = document.getElementById('prompt-ok');
+    const promptCancel = document.getElementById('prompt-cancel');
+    let promptResolve = null;
+
+    function showPrompt(title, defaultValue) {
+      return new Promise(function(resolve) {
+        promptResolve = resolve;
+        promptTitle.textContent = title;
+        promptInput.value = defaultValue || '';
+        promptInput.style.display = '';
+        promptOk.textContent = 'OK';
+        promptOverlay.classList.add('visible');
+        promptInput.focus();
+        promptInput.select();
+      });
+    }
+
+    function showConfirm(title) {
+      return new Promise(function(resolve) {
+        promptResolve = resolve;
+        promptTitle.textContent = title;
+        promptInput.style.display = 'none';
+        promptOk.textContent = 'Yes';
+        promptOverlay.classList.add('visible');
+        promptOk.focus();
+      });
+    }
+
+    function closePrompt(value) {
+      promptOverlay.classList.remove('visible');
+      if (promptResolve) {
+        var r = promptResolve;
+        promptResolve = null;
+        r(value);
+      }
+      term.focus();
+    }
+
+    promptOk.addEventListener('click', function() {
+      closePrompt(promptInput.style.display === 'none' ? true : promptInput.value);
+    });
+    promptCancel.addEventListener('click', function() {
+      closePrompt(promptInput.style.display === 'none' ? false : null);
+    });
+    promptOverlay.addEventListener('click', function(e) {
+      if (e.target === promptOverlay) closePrompt(promptInput.style.display === 'none' ? false : null);
+    });
+    promptInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); closePrompt(promptInput.value); }
+      if (e.key === 'Escape') { e.preventDefault(); closePrompt(null); }
+    });
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && promptOverlay.classList.contains('visible')) {
+        e.stopPropagation();
+        closePrompt(promptInput.style.display === 'none' ? false : null);
+      }
+    });
+
     function createNewSession() {
-      const name = `Shell ${sessions.size + 1}`;
-      ws.send(JSON.stringify({ type: 'create-session', name }));
+      const defaultName = `Shell ${sessions.size + 1}`;
+      showPrompt('New tab name:', defaultName).then(function(name) {
+        if (name === null) return;
+        name = name.trim() || defaultName;
+        ws.send(JSON.stringify({ type: 'create-session', name: name }));
+      });
     }
 
     function closeSession(id) {
-      ws.send(JSON.stringify({ type: 'close-session', sessionId: id }));
+      const session = sessions.get(id);
+      const name = session ? session.name : 'this tab';
+      showConfirm('Close "' + name + '"?').then(function(ok) {
+        if (ok) ws.send(JSON.stringify({ type: 'close-session', sessionId: id }));
+      });
     }
 
     function renameSession(id, name) {
@@ -2755,6 +2909,20 @@
         blue: '#56949f', magenta: '#907aa9', cyan: '#56949f', white: '#85827e',
         brightBlack: '#858090', header: '#fffaf3', tabbar: '#f2e9e1', activeTab: '#faf4ed', accent: '#d7827e',
         keyword: '#907aa9', string: '#b07627', number: '#b66e6b', command: '#56949f'
+      },
+      tinaciousDesign: {
+        background: '#1D1D26', foreground: '#B3B3D4', cursor: '#ff3399', selection: '#ff339933',
+        black: '#2c2c3e', red: '#ff3399', green: '#00D364', yellow: '#FFCC66',
+        blue: '#00BFFF', magenta: '#CC66FF', cyan: '#00CED1', white: '#ffffff',
+        brightBlack: '#3d3d56', header: '#252530', tabbar: '#1D1D26', activeTab: '#2c2c3e', accent: '#ff3399',
+        keyword: '#FF3399', string: '#FFCC66', number: '#CC66FF', command: '#00BFFF'
+      },
+      tinaciousDesignLight: {
+        background: '#f8f8ff', foreground: '#44425e', cursor: '#ff3399', selection: '#dbdaff',
+        black: '#2c2c3e', red: '#ff3399', green: '#00b253', yellow: '#FFAA00',
+        blue: '#01a9e1', magenta: '#CC66FF', cyan: '#00CED1', white: '#ffffff',
+        brightBlack: '#3d3d56', header: '#f5f5ff', tabbar: '#f0f0ff', activeTab: '#f8f8ff', accent: '#ff3399',
+        keyword: '#FF3399', string: '#FFAA00', number: '#CC66FF', command: '#01a9e1'
       }
     };
 

@@ -1,5 +1,4 @@
 window.NotesPanel = (function() {
-  const STORAGE_KEY = 'synesthesia-notes-data2';
   var modal, notesTiles, noteEditor, noteTitleInput, noteContentArea, noteImagesPreview;
   var noteBackBtn, noteDeleteBtn, noteUploadBtn, noteFileInput, closeBtn, addBtn;
   var data = [];
@@ -7,32 +6,18 @@ window.NotesPanel = (function() {
   var IMG_RE = /!\[([^\]]*)\]\(([^)]+)\)/g;
 
   function load() {
-    try {
-      var raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        data = JSON.parse(raw);
-      } else {
-        // Migrate from old combined storage
-        var old = localStorage.getItem('synesthesia-notes-data');
-        if (old) {
-          var parsed = JSON.parse(old);
-          var notes = parsed.notes;
-          if (typeof notes === 'string' && notes.trim()) {
-            data = [{ id: Date.now().toString(36), title: 'Imported Note', content: notes, updatedAt: Date.now() }];
-          } else if (Array.isArray(notes) && notes.length) {
-            data = notes;
-          }
-          if (data.length) save();
-        }
-      }
-    } catch (e) {
-      data = [];
-    }
-    if (!Array.isArray(data)) data = [];
+    return fetch('/api/notes')
+      .then(function(r) { return r.json(); })
+      .then(function(arr) { data = Array.isArray(arr) ? arr : []; })
+      .catch(function() { data = []; });
   }
 
   function save() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    fetch('/api/notes', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).catch(function() {});
   }
 
   // --- Tile rendering ---
@@ -66,13 +51,11 @@ window.NotesPanel = (function() {
       tile.className = 'notes-tile';
       tile.addEventListener('click', function() { openNote(note.id); });
 
-      // Title
       var title = document.createElement('div');
       title.className = 'notes-tile-title';
       title.textContent = note.title || 'Untitled';
       tile.appendChild(title);
 
-      // Content preview (text only, multi-line)
       var textContent = stripImages(note.content || '');
       if (textContent) {
         var preview = document.createElement('div');
@@ -81,7 +64,6 @@ window.NotesPanel = (function() {
         tile.appendChild(preview);
       }
 
-      // Image thumbnails
       var images = extractImages(note.content || '');
       if (images.length > 0) {
         var thumbRow = document.createElement('div');
@@ -103,7 +85,6 @@ window.NotesPanel = (function() {
         tile.appendChild(thumbRow);
       }
 
-      // Delete button
       var del = document.createElement('button');
       del.className = 'notes-tile-delete';
       del.textContent = '\u00d7';
@@ -136,12 +117,9 @@ window.NotesPanel = (function() {
     var content = noteContentArea.value;
     noteImagesPreview.innerHTML = '';
     if (!content.trim()) return;
-    // Split content by image markdown, render text and images in order
     var parts = content.split(/!\[([^\]]*)\]\(([^)]+)\)/);
-    // parts: [text, alt, url, text, alt, url, ...]
     for (var i = 0; i < parts.length; i++) {
       if (i % 3 === 0) {
-        // Text segment
         if (parts[i]) {
           var span = document.createElement('div');
           span.className = 'notes-preview-text';
@@ -149,7 +127,6 @@ window.NotesPanel = (function() {
           noteImagesPreview.appendChild(span);
         }
       } else if (i % 3 === 2) {
-        // URL segment — render image
         var img = document.createElement('img');
         img.src = parts[i];
         img.alt = parts[i - 1] || '';
@@ -187,8 +164,9 @@ window.NotesPanel = (function() {
   }
 
   function deleteNote(id) {
+    // Server handles image cleanup
+    fetch('/api/notes/' + id, { method: 'DELETE' }).catch(function() {});
     data = data.filter(function(n) { return n.id !== id; });
-    save();
     if (editingNoteId === id) {
       editingNoteId = null;
       noteEditor.classList.remove('visible');
@@ -228,7 +206,6 @@ window.NotesPanel = (function() {
     textarea.value = before + text + after;
     textarea.selectionStart = textarea.selectionEnd = start + text.length;
     textarea.focus();
-    // Trigger save
     var evt = new Event('input', { bubbles: true });
     textarea.dispatchEvent(evt);
   }
@@ -242,12 +219,11 @@ window.NotesPanel = (function() {
         var name = 'paste-' + Date.now() + '.png';
         var renamedFile = new File([file], name, { type: file.type });
         insertAtCursor(noteContentArea, '![Uploading...]()');
-        var placeholderPos = noteContentArea.selectionStart;
         uploadFile(renamedFile).then(function(url) {
           noteContentArea.value = noteContentArea.value.replace('![Uploading...]()', '![image](' + url + ')');
           var evt = new Event('input', { bubbles: true });
           noteContentArea.dispatchEvent(evt);
-        }).catch(function(err) {
+        }).catch(function() {
           noteContentArea.value = noteContentArea.value.replace('![Uploading...]()', '[Upload failed]');
           var evt = new Event('input', { bubbles: true });
           noteContentArea.dispatchEvent(evt);
@@ -305,10 +281,8 @@ window.NotesPanel = (function() {
     closeBtn = document.getElementById('notes-close');
     addBtn = document.getElementById('notes-add-btn');
 
-    load();
-    renderTiles();
+    load().then(function() { renderTiles(); });
 
-    // Notes events
     addBtn.addEventListener('click', function() { createNote(); });
     noteBackBtn.addEventListener('click', function() { closeEditor(); });
     noteDeleteBtn.addEventListener('click', function() {
@@ -330,7 +304,6 @@ window.NotesPanel = (function() {
     noteTitleInput.addEventListener('input', onNoteInput);
     noteContentArea.addEventListener('input', onNoteInput);
 
-    // Close events
     closeBtn.addEventListener('click', function() {
       if (editingNoteId) closeEditor();
       modal.classList.remove('visible');

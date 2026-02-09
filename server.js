@@ -11,6 +11,49 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// --- Persistent JSON store ---
+const DATA_DIR = path.join(__dirname, 'data');
+
+function readJSON(file, fallback) {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(DATA_DIR, file), 'utf8'));
+  } catch { return fallback; }
+}
+
+function writeJSON(file, data) {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  fs.writeFileSync(path.join(DATA_DIR, file), JSON.stringify(data, null, 2));
+}
+
+app.get('/api/todos', (req, res) => res.json(readJSON('todos.json', [])));
+app.put('/api/todos', (req, res) => {
+  writeJSON('todos.json', req.body);
+  res.json({ ok: true });
+});
+
+app.get('/api/notes', (req, res) => res.json(readJSON('notes.json', [])));
+app.put('/api/notes', (req, res) => {
+  writeJSON('notes.json', req.body);
+  res.json({ ok: true });
+});
+
+app.delete('/api/notes/:id', (req, res) => {
+  var notes = readJSON('notes.json', []);
+  var note = notes.find(n => n.id === req.params.id);
+  if (note) {
+    // Clean up uploaded images referenced in the note
+    var re = /!\[[^\]]*\]\(([^)]+)\)/g;
+    var m;
+    while ((m = re.exec(note.content || '')) !== null) {
+      var imgPath = path.join(__dirname, 'public', m[1]);
+      try { fs.unlinkSync(imgPath); } catch {}
+    }
+    notes = notes.filter(n => n.id !== req.params.id);
+    writeJSON('notes.json', notes);
+  }
+  res.json({ ok: true });
+});
+
 app.post('/api/upload', (req, res) => {
   try {
     const { name, data } = req.body;

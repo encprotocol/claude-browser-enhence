@@ -23,8 +23,9 @@ npm-debug.log*
 dist/
 build/
 
-# Uploaded files
+# Uploaded files & data
 public/uploads/
+data/
 
 # Test coverage
 coverage/
