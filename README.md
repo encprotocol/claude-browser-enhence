@@ -1,37 +1,50 @@
 # Synesthesia Web Terminal
 
-A browser-based terminal emulator with automatic syntax highlighting for terminal output. Built with xterm.js, WebSockets, and node-pty.
+A browser-based terminal emulator with automatic syntax highlighting, file management, notes, and AI-powered English correction. Built with xterm.js, WebSockets, and node-pty.
 
 ## Features
 
-- **Auto-detecting keyword colorization** - Automatically highlights patterns in terminal output:
+- **Auto-detecting keyword colorization** — Automatically highlights patterns in terminal output:
   - Status words (success/error/warning/info)
   - URLs (clickable, blue underlined)
   - File paths, IP addresses, email addresses
   - Percentages, file sizes, durations
   - Git hashes, environment variables, CLI flags
   - Timestamps, function calls, backtick-wrapped code
-- **Multiple shell sessions** - Tabbed interface to manage multiple concurrent shells
-- **Session persistence** - Sessions survive browser reconnects (1-hour timeout)
-- **File browser** - VS Code-style sidebar (`Cmd+B`) with directory tree, file preview, and live file watching:
-  - **Syntax highlighting** - Code files are highlighted using highlight.js with colors that adapt to the active theme
-  - **Image preview** - PNG, JPG, GIF, SVG, WebP, ICO, and BMP files display inline
-  - **PDF preview** - PDF files render in an embedded viewer
-  - **Live updates** - Previewed files auto-refresh when modified on disk
-  - **Resizable panel** - Drag the left edge to resize (up to 85% of viewport)
-  - **Persistent state** - Toggling the sidebar preserves the open preview and file watcher
-- **English correction** - Toggle correction mode (`Cmd+X`) to type in a dedicated panel, check grammar/spelling via Claude AI (Haiku), review word-level diffs, then accept or edit before sending to the terminal
-- **Theme support** - 18 built-in themes (Synesthesia, Dracula, Tokyo Night, Catppuccin, Nord, Gruvbox, Monokai, and more) plus full color customization via settings panel
-- **Clickable links** - URLs in terminal output are clickable and open in a new tab
-- **Image paste & preview** - Paste images from clipboard into the terminal; pasted images are cached and displayed as `[Image #N]` markers. Hover to preview, click to open full-size viewer
-- **Terminal resize** - Automatic terminal resizing to fit the browser window
-- **Font settings** - Adjustable font size and line height via settings panel
+- **Multiple shell sessions** — Tabbed interface with named tabs (prompt on create, confirm on close, double-click to rename)
+- **Session persistence** — Sessions survive browser reconnects (1-hour timeout)
+- **File browser** — VS Code-style sidebar (`Cmd+B`) with directory tree, file preview, and live file watching:
+  - **Syntax highlighting** — Code files are highlighted using highlight.js, colors adapt to the active theme
+  - **Markdown preview** — Toggle between raw syntax and rendered markdown view for `.md` files
+  - **Image preview** — PNG, JPG, GIF, SVG, WebP, ICO, and BMP files display inline
+  - **PDF preview** — PDF files render in an embedded viewer
+  - **Folder navigation** — Editable path bar, go-up button, double-click to enter directories
+  - **Live updates** — Previewed files auto-refresh when modified on disk
+  - **Resizable panel** — Drag the left edge to resize (up to 85% of viewport)
+  - **Persistent state** — Toggling the sidebar preserves the open preview and file watcher
+- **Todo panel** (`Cmd+J`) — Quick-access checklist with add, toggle, and delete
+- **Notes panel** (`Cmd+K`) — Rich note-taking with tile view:
+  - Title and multi-line content preview in tile grid
+  - Image thumbnails on tiles
+  - Editor with left=textarea, right=rendered preview (text + images)
+  - Paste images from clipboard or upload files via button
+  - Server-side persistence; uploaded images cleaned up on note deletion
+- **English correction** — Toggle correction mode (`Cmd+X`) to type in a dedicated panel, check grammar/spelling via Claude AI (Haiku model), review word-level diffs, then accept or edit before sending to the terminal. **Requires [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed and authenticated on the server.**
+- **Theme support** — 27 built-in themes plus full color customization via settings panel:
+  - **Dark**: Synesthesia, Dracula, Tokyo Night, Catppuccin, Rosé Pine, Synthwave '84, Cyberpunk, Nord, Gruvbox, Ayu Dark, One Dark, Monokai, Tinacious Design
+  - **Soft**: Catppuccin Frappé, Catppuccin Macchiato, Everforest Dark, Palenight, Kanagawa, Rosé Pine Moon, Everforest Light
+  - **Light**: GitHub, One Light, Ayu Light, Solarized Light, Catppuccin Latte, Rosé Pine Dawn, Tinacious Design Light
+- **Clickable links** — URLs in terminal output open in a new tab
+- **Image paste & preview** — Paste images from clipboard into the terminal; displayed as `[Image #N]` markers with hover preview and full-size viewer
+- **Terminal resize** — Automatic terminal resizing to fit the browser window
+- **Font settings** — Adjustable font size and line height via settings panel
 
 ## Tech Stack
 
 - **Frontend**: xterm.js, vanilla JS/CSS
 - **Backend**: Node.js, Express, WebSocket (ws), node-pty
 - **Testing**: Jest
+- **AI**: Claude Code CLI (for English correction)
 
 ## Getting Started
 
@@ -39,6 +52,7 @@ A browser-based terminal emulator with automatic syntax highlighting for termina
 
 - Node.js (v16+)
 - npm
+- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) (optional, required for English correction feature)
 
 ### Install & Run
 
@@ -58,12 +72,15 @@ npm test
 ## Project Structure
 
 ```
-├── server.js              # Express + WebSocket server, PTY session management, file API
+├── server.js              # Express + WebSocket server, PTY management, REST API
 ├── public/
-│   ├── index.html         # Terminal UI (xterm.js, tabs, themes, correction panel)
+│   ├── index.html         # Terminal UI (xterm.js, tabs, themes, settings, dialogs)
 │   ├── highlighter.js     # Auto-detecting keyword colorizer (ANSI patterns)
 │   ├── diff.js            # Word-level diff (LCS) for correction display
-│   └── filebrowser.js     # File browser sidebar (directory tree, viewer, image/PDF preview)
+│   ├── filebrowser.js     # File browser sidebar (directory tree, viewer, markdown preview)
+│   ├── todo.js            # Todo panel (checklist CRUD)
+│   └── notes.js           # Notes panel (tiles, editor, image upload)
+├── data/                  # Server-side persistent storage (todos, notes JSON)
 ├── __tests__/
 │   ├── highlighter.test.js
 │   ├── diff.test.js
@@ -72,17 +89,30 @@ npm test
 └── package.json
 ```
 
+## API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/todos` | Retrieve all todos |
+| `PUT` | `/api/todos` | Save todos |
+| `GET` | `/api/notes` | Retrieve all notes |
+| `PUT` | `/api/notes` | Save notes |
+| `DELETE` | `/api/notes/:id` | Delete note and clean up uploaded images |
+| `POST` | `/api/upload` | Upload file (base64 JSON) |
+| `GET` | `/api/file` | Read file contents (for file browser) |
+
 ## Keyboard Shortcuts
 
 | Shortcut | Action |
 |----------|--------|
 | `Cmd+B` | Toggle file browser sidebar |
+| `Cmd+J` | Toggle todo panel |
+| `Cmd+K` | Toggle notes panel |
 | `Cmd+X` | Toggle English correction mode |
 | `Shift+Enter` | Send newline without executing |
 | `Ctrl+Shift+T` | New tab |
 | `Ctrl+Shift+W` | Close current tab |
 | `Ctrl+Tab` | Next tab |
-| `Ctrl+Shift+Tab` | Previous tab |
 
 ### In Correction Panel
 
@@ -90,4 +120,5 @@ npm test
 |----------|--------|
 | `Enter` | Check & correct text (input) / Accept correction (result) |
 | `Shift+Enter` | Newline in text input |
+| `Cmd+Enter` | Send text directly without correction |
 | `Esc` | Clear text (input) / Go back to edit (result) |
