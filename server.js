@@ -191,7 +191,22 @@ app.get('/api/recordings', (req, res) => {
               }
             }
           }
-          buf = buf.replace(/[\x00-\x1f\x7f]/g, '').trim();
+          // Strip ANSI escape sequences before removing control chars
+          buf = buf
+            .replace(/\x1b\[[?>=!]?[0-9;]*[A-Za-z~]/g, '')  // CSI sequences
+            .replace(/\x1bO./g, '')                            // SS3 sequences
+            .replace(/\x1b\][^\x07]*(?:\x07|\x1b\\)/g, '')   // OSC sequences
+            .replace(/\x1b./g, '');                            // Other ESC sequences
+          // Simulate backspace editing
+          const chars = [];
+          for (const ch of buf) {
+            if (ch === '\x7f' || ch === '\x08') {
+              chars.pop();
+            } else if (ch.charCodeAt(0) >= 0x20) {
+              chars.push(ch);
+            }
+          }
+          buf = chars.join('').trim();
           firstInput = (prefix + buf).trim();
         }
         metas.push({

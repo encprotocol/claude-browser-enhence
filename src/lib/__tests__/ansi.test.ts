@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { stripAnsi, buildCleanTranscript } from '@/lib/ansi';
+import { stripAnsi, buildCleanTranscript, cleanInputBuffer } from '@/lib/ansi';
 import type { RecordingEvent } from '@/types';
 
 describe('stripAnsi', () => {
@@ -598,5 +598,48 @@ describe('buildCleanTranscript', () => {
     const childIndent = childLine!.match(/^(\s*)/)?.[1].length ?? 0;
     const grandIndent = grandLine!.match(/^(\s*)/)?.[1].length ?? 0;
     expect(grandIndent).toBeGreaterThan(childIndent);
+  });
+});
+
+describe('cleanInputBuffer', () => {
+  it('passes plain text unchanged', () => {
+    expect(cleanInputBuffer('hello world')).toBe('hello world');
+  });
+
+  it('strips CSI focus events \\x1b[I and \\x1b[O', () => {
+    expect(cleanInputBuffer('Can you \x1b[O\x1b[Ican you tell me')).toBe('Can you can you tell me');
+  });
+
+  it('strips bracket paste mode sequences', () => {
+    expect(cleanInputBuffer('\x1b[200~pasted text\x1b[201~')).toBe('pasted text');
+  });
+
+  it('strips SS3 sequences (arrow keys)', () => {
+    expect(cleanInputBuffer('hello\x1bOAworld')).toBe('helloworld');
+  });
+
+  it('strips CSI cursor movement sequences', () => {
+    expect(cleanInputBuffer('text\x1b[5Amore\x1b[Dstuff')).toBe('textmorestuff');
+  });
+
+  it('simulates backspace \\x7f', () => {
+    expect(cleanInputBuffer('helo\x7flo')).toBe('hello');
+  });
+
+  it('simulates backspace \\x08', () => {
+    expect(cleanInputBuffer('abc\x08d')).toBe('abd');
+  });
+
+  it('handles multiple backspaces', () => {
+    expect(cleanInputBuffer('Ica\x7f\x7f\x7fWhat')).toBe('What');
+  });
+
+  it('backspace at start of buffer does nothing', () => {
+    expect(cleanInputBuffer('\x7fhello')).toBe('hello');
+  });
+
+  it('strips all escape sequences then handles backspaces', () => {
+    // Simulates: focus out, focus in, typing with corrections
+    expect(cleanInputBuffer('Can you \x1b[O\x1b[Ican you \x1b[Itell me')).toBe('Can you can you tell me');
   });
 });

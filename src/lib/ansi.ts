@@ -1,5 +1,34 @@
 import type { RecordingEvent } from '@/types';
 
+/**
+ * Clean a raw terminal input buffer: strip ANSI escape sequences,
+ * simulate backspace editing, and remove control characters.
+ */
+export function cleanInputBuffer(raw: string): string {
+  // 1. Strip ANSI escape sequences before removing control chars
+  let s = raw
+    // CSI sequences: ESC [ (optional ?) params final byte (including ~)
+    .replace(/\x1b\[[?>=!]?[0-9;]*[A-Za-z~]/g, '')
+    // SS3 sequences: ESC O <char>
+    .replace(/\x1bO./g, '')
+    // OSC sequences
+    .replace(/\x1b\][^\x07]*(?:\x07|\x1b\\)/g, '')
+    // Any remaining two-byte ESC sequences
+    .replace(/\x1b./g, '');
+
+  // 2. Simulate backspace editing (\x7f and \x08)
+  const chars: string[] = [];
+  for (const ch of s) {
+    if (ch === '\x7f' || ch === '\x08') {
+      chars.pop();
+    } else if (ch.charCodeAt(0) >= 0x20) {
+      // Only keep printable characters
+      chars.push(ch);
+    }
+  }
+  return chars.join('');
+}
+
 export function stripAnsi(str: string): string {
   return str
     // Strip OSC sequences: ESC ] ... BEL or ESC ] ... ST
