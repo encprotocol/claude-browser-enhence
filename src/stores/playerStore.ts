@@ -10,6 +10,7 @@ interface PlayerState {
   repeatMode: RepeatMode;
   shuffle: boolean;
   wasPlaying: boolean;
+  savedPosition: number;
 
   // Transient
   playing: boolean;
@@ -30,6 +31,7 @@ interface PlayerState {
   togglePanel: () => void;
   setPanelOpen: (open: boolean) => void;
   reorderTracks: (from: number, to: number) => void;
+  savePosition: () => void;
   initEngine: () => void;
 }
 
@@ -45,6 +47,7 @@ export const usePlayerStore = create<PlayerState>()(
       repeatMode: 'all',
       shuffle: false,
       wasPlaying: false,
+      savedPosition: 0,
       playing: false,
       panelOpen: false,
       addingTrack: false,
@@ -110,7 +113,7 @@ export const usePlayerStore = create<PlayerState>()(
 
         if (playing) {
           audioEngine.pause();
-          set({ playing: false, wasPlaying: false });
+          set({ playing: false, wasPlaying: false, savedPosition: audioEngine.getCurrentTime() });
         } else {
           // If no current track, select the first one
           if (!currentTrackId && tracks.length > 0) {
@@ -200,18 +203,31 @@ export const usePlayerStore = create<PlayerState>()(
         set({ tracks: newTracks });
       },
 
+      savePosition: () => {
+        set({ savedPosition: audioEngine.getCurrentTime() });
+      },
+
       initEngine: () => {
         audioEngine.setVolume(1);
         audioEngine.onEnded(() => {
           get().next();
         });
 
+        // Save position before page unload
+        window.addEventListener('beforeunload', () => {
+          const { playing } = get();
+          if (playing) {
+            set({ savedPosition: audioEngine.getCurrentTime(), wasPlaying: true });
+          }
+        });
+
         // Resume if wasPlaying
-        const { wasPlaying, currentTrackId, tracks } = get();
+        const { wasPlaying, currentTrackId, tracks, savedPosition } = get();
         if (wasPlaying && currentTrackId) {
           const track = tracks.find((t) => t.id === currentTrackId);
           if (track) {
             audioEngine.load(track);
+            if (savedPosition > 0) audioEngine.seek(savedPosition);
             audioEngine.play().then((ok) => {
               set({ playing: ok });
             });
@@ -221,8 +237,8 @@ export const usePlayerStore = create<PlayerState>()(
     }),
     {
       name: 'synesthesia-player-store',
-      partialize: ({ tracks, currentTrackId, repeatMode, shuffle, wasPlaying }) => ({
-        tracks, currentTrackId, repeatMode, shuffle, wasPlaying,
+      partialize: ({ tracks, currentTrackId, repeatMode, shuffle, wasPlaying, savedPosition }) => ({
+        tracks, currentTrackId, repeatMode, shuffle, wasPlaying, savedPosition,
       }),
       onRehydrate: () => {
         return (state) => {

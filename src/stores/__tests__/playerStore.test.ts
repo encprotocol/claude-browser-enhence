@@ -9,6 +9,8 @@ vi.mock('@/lib/audioEngine', () => ({
   setVolume: vi.fn(),
   onEnded: vi.fn(),
   destroy: vi.fn(),
+  getCurrentTime: vi.fn(() => 0),
+  seek: vi.fn(),
   extractYouTubeId: vi.fn((url: string) => {
     try {
       const u = new URL(url);
@@ -48,6 +50,7 @@ describe('playerStore', () => {
       playing: false,
       wasPlaying: false,
       panelOpen: false,
+      savedPosition: 0,
     });
   });
 
@@ -282,6 +285,46 @@ describe('playerStore', () => {
       const { tracks, currentTrackId } = usePlayerStore.getState();
       const current = tracks.find((t) => t.id === currentTrackId);
       expect(current).toBeUndefined();
+    });
+  });
+
+  describe('position persistence', () => {
+    it('savePosition stores the current engine time', () => {
+      (audioEngine.getCurrentTime as ReturnType<typeof vi.fn>).mockReturnValue(42);
+      usePlayerStore.getState().savePosition();
+      expect(usePlayerStore.getState().savedPosition).toBe(42);
+    });
+
+    it('initEngine seeks to savedPosition when resuming', () => {
+      usePlayerStore.setState({
+        wasPlaying: true,
+        currentTrackId: 'test-id',
+        tracks: [{ id: 'test-id', title: 'Test', url: 'https://example.com/a.mp3', type: 'audio' }],
+        savedPosition: 42,
+      });
+      usePlayerStore.getState().initEngine();
+      expect(audioEngine.load).toHaveBeenCalled();
+      expect(audioEngine.seek).toHaveBeenCalledWith(42);
+    });
+
+    it('initEngine does not seek when savedPosition is 0', () => {
+      usePlayerStore.setState({
+        wasPlaying: true,
+        currentTrackId: 'test-id',
+        tracks: [{ id: 'test-id', title: 'Test', url: 'https://example.com/a.mp3', type: 'audio' }],
+        savedPosition: 0,
+      });
+      usePlayerStore.getState().initEngine();
+      expect(audioEngine.load).toHaveBeenCalled();
+      expect(audioEngine.seek).not.toHaveBeenCalled();
+    });
+
+    it('pause saves the current position', async () => {
+      (audioEngine.getCurrentTime as ReturnType<typeof vi.fn>).mockReturnValue(30);
+      await usePlayerStore.getState().addTrack('https://example.com/a.mp3', 'A');
+      usePlayerStore.getState().togglePlayPause(); // play
+      usePlayerStore.getState().togglePlayPause(); // pause
+      expect(usePlayerStore.getState().savedPosition).toBe(30);
     });
   });
 

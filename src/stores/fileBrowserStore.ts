@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { useConnectionStore } from '@/stores/connectionStore';
+import { useSessionStore } from '@/stores/sessionStore';
 import type { FileEntry } from '@/types';
 
 interface SessionFBState {
@@ -57,6 +59,7 @@ interface FileBrowserState {
   closeViewer: () => void;
   handleFileUpdate: (path: string, content?: string, error?: string) => void;
 
+  requestInitialData: () => void;
   saveSessionState: (sessionId: string) => void;
   restoreSessionState: (sessionId: string) => boolean;
   clearSessionState: (sessionId: string) => void;
@@ -222,6 +225,14 @@ export const useFileBrowserStore = create<FileBrowserState>((set, get) => ({
         liveActive: true,
       });
     }
+  },
+
+  requestInitialData: () => {
+    const { currentRoot, dirCache } = get();
+    if (currentRoot && dirCache.size > 0) return;
+    const sessionId = useSessionStore.getState().activeSessionId;
+    if (!sessionId) return;
+    useConnectionStore.getState().sendMessage('get-cwd', { sessionId });
   },
 
   saveSessionState: (sessionId) => {
