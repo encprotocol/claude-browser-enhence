@@ -50,6 +50,7 @@ export default function RecordingsModal() {
   const loading = useRecordingStore((s) => s.loading);
   const viewingRecording = useRecordingStore((s) => s.viewingRecording);
   const viewingLoading = useRecordingStore((s) => s.viewingLoading);
+  const lastViewedId = useRecordingStore((s) => s.lastViewedId);
 
   useEffect(() => {
     if (visible) useRecordingStore.getState().load();
@@ -95,7 +96,7 @@ export default function RecordingsModal() {
               recordings.map((rec) => (
                 <div
                   key={rec.id}
-                  className="recordings-row"
+                  className={`recordings-row${rec.id === lastViewedId ? ' last-viewed' : ''}`}
                   onClick={() => useRecordingStore.getState().viewRecording(rec.id)}
                 >
                   <span className="recordings-row-path">{rec.cwd}</span>

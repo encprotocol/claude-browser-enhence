@@ -9,6 +9,7 @@ interface RecordingState {
   loading: boolean;
   viewingRecording: Recording | null;
   viewingLoading: boolean;
+  lastViewedId: string | null;
   activeRecordings: Map<string, string>;
 
   load: () => Promise<void>;
@@ -27,6 +28,7 @@ export const useRecordingStore = create<RecordingState>((set, get) => ({
   loading: false,
   viewingRecording: null,
   viewingLoading: false,
+  lastViewedId: null,
   activeRecordings: new Map(),
 
   load: async () => {
@@ -38,7 +40,7 @@ export const useRecordingStore = create<RecordingState>((set, get) => ({
   viewRecording: async (id) => {
     set({ viewingLoading: true });
     const recording = await fetchRecording(id);
-    set({ viewingRecording: recording, viewingLoading: false });
+    set({ viewingRecording: recording, viewingLoading: false, lastViewedId: id });
   },
 
   closeViewer: () => set({ viewingRecording: null }),

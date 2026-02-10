@@ -972,10 +972,11 @@ header h1 {
 .recordings-row {
   display: flex; align-items: center; gap: 8px;
   padding: 6px 8px; cursor: pointer;
-  border-left: 3px solid var(--theme-accent);
+  border-left: 3px solid transparent;
   border-bottom: 1px solid var(--theme-button-border);
   transition: background 0.1s;
 }
+.recordings-row.last-viewed { border-left-color: var(--theme-accent); }
 .recordings-row:last-child { border-bottom: none; }
 .recordings-row:hover { background: var(--theme-button-bg); }
 .recordings-row-path {
