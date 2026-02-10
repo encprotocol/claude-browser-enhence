@@ -32,6 +32,7 @@ interface FileBrowserState {
   viewerIsError: boolean;
   viewerRendered: boolean;
   viewerRawContent: string;
+  viewerScrollTop: number;
   watchedFile: string | null;
   liveActive: boolean;
   viewerWidth: number;
@@ -47,6 +48,7 @@ interface FileBrowserState {
   setHome: (home: string) => void;
   setViewerWidth: (width: number) => void;
   setViewerRendered: (rendered: boolean) => void;
+  setViewerScrollTop: (scrollTop: number) => void;
   setLiveActive: (active: boolean) => void;
 
   navigateToDir: (dirPath: string) => void;
@@ -89,6 +91,7 @@ export const useFileBrowserStore = create<FileBrowserState>()(
       viewerIsError: false,
       viewerRendered: false,
       viewerRawContent: '',
+      viewerScrollTop: 0,
       watchedFile: null,
       liveActive: false,
       viewerWidth: 400,
@@ -102,6 +105,7 @@ export const useFileBrowserStore = create<FileBrowserState>()(
       setHome: (home) => set({ home }),
       setViewerWidth: (viewerWidth) => set({ viewerWidth }),
       setViewerRendered: (viewerRendered) => set({ viewerRendered }),
+      setViewerScrollTop: (viewerScrollTop) => set({ viewerScrollTop }),
       setLiveActive: (liveActive) => set({ liveActive }),
 
       navigateToDir: (dirPath) => {
@@ -166,6 +170,7 @@ export const useFileBrowserStore = create<FileBrowserState>()(
           viewerRawContent: isError ? '' : content,
           viewerIsError: isError,
           viewerRendered: false,
+          viewerScrollTop: 0,
           watchedFile: isError ? null : filePath,
         });
       },
@@ -210,6 +215,7 @@ export const useFileBrowserStore = create<FileBrowserState>()(
           viewerRawContent: '',
           viewerIsError: false,
           viewerRendered: false,
+          viewerScrollTop: 0,
           watchedFile: null,
           liveActive: false,
         });

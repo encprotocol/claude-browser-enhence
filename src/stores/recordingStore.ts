@@ -6,6 +6,10 @@ import {
 } from '@/lib/api';
 import { buildCleanTranscript, formatTranscriptForPrompt } from '@/lib/ansi';
 import { closeAllPopups } from '@/lib/popupManager';
+import { useConnectionStore } from '@/stores/connectionStore';
+import { scheduleAutoType } from '@/lib/autoType';
+
+const MAX_TRANSCRIPT_CHARS = 50000;
 
 interface RecordingState {
   recordings: RecordingMeta[];
@@ -18,6 +22,7 @@ interface RecordingState {
   summary: RecordingSummary | null;
   summaryLoading: boolean;
   summaryError: string | null;
+  bringBackLoading: boolean;
 
   load: () => Promise<void>;
   viewRecording: (id: string) => Promise<void>;
@@ -30,6 +35,7 @@ interface RecordingState {
   loadSummary: (id: string) => Promise<void>;
   generateSummary: (id: string) => Promise<void>;
   clearSummary: () => void;
+  bringBackSession: (mode: 'transcript' | 'summary') => void;
 }
 
 export const useRecordingStore = create<RecordingState>((set, get) => ({
@@ -43,6 +49,7 @@ export const useRecordingStore = create<RecordingState>((set, get) => ({
   summary: null,
   summaryLoading: false,
   summaryError: null,
+  bringBackLoading: false,
 
   load: async () => {
     set({ loading: true });
@@ -119,4 +126,42 @@ export const useRecordingStore = create<RecordingState>((set, get) => ({
   },
 
   clearSummary: () => set({ summary: null, summaryLoading: false, summaryError: null }),
+
+  bringBackSession: (mode) => {
+    const recording = get().viewingRecording;
+    if (!recording) return;
+
+    let contextText: string;
+
+    if (mode === 'summary') {
+      const summary = get().summary;
+      if (!summary) return;
+      const parts: string[] = [];
+      if (summary.abstract) parts.push(summary.abstract);
+      if (summary.detail) parts.push(summary.detail);
+      contextText = parts.join('\n\n');
+    } else {
+      const segments = buildCleanTranscript(recording.events);
+      let transcript = formatTranscriptForPrompt(segments);
+      if (transcript.length > MAX_TRANSCRIPT_CHARS) {
+        // Truncate at line boundary
+        const truncated = transcript.slice(0, MAX_TRANSCRIPT_CHARS);
+        const lastNewline = truncated.lastIndexOf('\n');
+        transcript = (lastNewline > 0 ? truncated.slice(0, lastNewline) : truncated);
+        transcript = '... (truncated)\n' + transcript;
+      }
+      contextText = transcript;
+    }
+
+    const sessionName = `Resume: ${recording.sessionName}`;
+    useConnectionStore.getState().sendMessage('create-session', {
+      name: sessionName,
+      cwd: recording.cwd,
+    });
+
+    // Close viewer and modal
+    set({ viewingRecording: null, summary: null, summaryLoading: false, summaryError: null, visible: false });
+
+    scheduleAutoType(contextText);
+  },
 }));

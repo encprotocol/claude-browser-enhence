@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRecordingStore } from '@/stores/recordingStore';
 import { useCorrectionStore } from '@/stores/correctionStore';
 import RecordingPlayer from '@/components/Modals/RecordingPlayer';
@@ -112,6 +112,48 @@ function SummaryTab({ recording }: { recording: Recording }) {
   );
 }
 
+function BringBackButton({ recording }: { recording: Recording }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const summary = useRecordingStore((s) => s.summary);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const handleClick = (mode: 'transcript' | 'summary') => {
+    setOpen(false);
+    useRecordingStore.getState().bringBackSession(mode);
+  };
+
+  return (
+    <div className="bring-back-wrapper" ref={ref}>
+      <button className="recordings-viewer-btn" onClick={() => setOpen(!open)}>
+        Bring Back ▾
+      </button>
+      {open && (
+        <div className="bring-back-dropdown">
+          <button className="bring-back-option" onClick={() => handleClick('transcript')}>
+            Raw Transcript
+          </button>
+          <button
+            className="bring-back-option"
+            onClick={() => handleClick('summary')}
+            disabled={!summary}
+          >
+            Summary{!summary ? ' (none)' : ''}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function RecordingViewer({ recording }: { recording: Recording }) {
   const [activeTab, setActiveTab] = useState<ViewerTab>('terminal');
   const handleBack = () => useRecordingStore.getState().closeViewer();
@@ -132,6 +174,7 @@ function RecordingViewer({ recording }: { recording: Recording }) {
         >
           Summary
         </button>
+        <BringBackButton recording={recording} />
         <span className="recordings-viewer-info">
           {recording.sessionName} — {recording.cwd}
         </span>

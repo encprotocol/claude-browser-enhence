@@ -3,6 +3,7 @@ import hljs from 'highlight.js';
 import { marked } from 'marked';
 import { useFileBrowserStore } from '@/stores/fileBrowserStore';
 import { useConnectionStore } from '@/stores/connectionStore';
+import { wrapLinesHtml } from '@/lib/lineNumbers';
 
 const EXT_LANGS: Record<string, string> = {
   js: 'javascript', mjs: 'javascript', cjs: 'javascript',
@@ -43,11 +44,40 @@ export default function FileViewerPanel() {
   const liveActive = useFileBrowserStore((s) => s.liveActive);
   const viewerWidth = useFileBrowserStore((s) => s.viewerWidth);
 
+  const viewerScrollTop = useFileBrowserStore((s) => s.viewerScrollTop);
+
   const contentRef = useRef<HTMLDivElement>(null);
   const resizeRef = useRef<{ startX: number; startWidth: number } | null>(null);
   const liveTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const scrollTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
   const isMarkdown = /\.(md|markdown)$/i.test(viewerFileName);
+
+  // Save scroll position as ratio (0–1) on scroll (debounced)
+  const handleScroll = useCallback(() => {
+    clearTimeout(scrollTimerRef.current);
+    scrollTimerRef.current = setTimeout(() => {
+      if (contentRef.current) {
+        const el = contentRef.current;
+        const maxScroll = el.scrollHeight - el.clientHeight;
+        const ratio = maxScroll > 0 ? el.scrollTop / maxScroll : 0;
+        useFileBrowserStore.getState().setViewerScrollTop(ratio);
+      }
+    }, 100);
+  }, []);
+
+  // Restore scroll position from ratio after content/mode changes
+  useEffect(() => {
+    if (contentRef.current && viewerScrollTop > 0) {
+      requestAnimationFrame(() => {
+        if (contentRef.current) {
+          const el = contentRef.current;
+          const maxScroll = el.scrollHeight - el.clientHeight;
+          el.scrollTop = viewerScrollTop * maxScroll;
+        }
+      });
+    }
+  }, [viewerContent, viewerRendered]);
 
   // Auto-clear live indicator after 2s
   useEffect(() => {
@@ -104,6 +134,8 @@ export default function FileViewerPanel() {
   let contentText = '';
   let isHtml = false;
 
+  let showLineNumbers = false;
+
   if (viewerMode === 'text') {
     if (viewerIsError) {
       contentText = viewerContent;
@@ -117,11 +149,22 @@ export default function FileViewerPanel() {
     } else {
       const highlighted = applyHighlighting(viewerFileName, viewerContent);
       if (highlighted) {
-        contentHtml = highlighted;
+        // Wrap lines inside the <code> tag for line numbering
+        contentHtml = highlighted.replace(
+          /(<code class="hljs">)([\s\S]*)(<\/code>)/,
+          (_m, open, body, close) => open + wrapLinesHtml(body) + close,
+        );
         isHtml = true;
       } else {
-        contentText = viewerContent;
+        // Plain text — escape HTML and wrap lines
+        const escaped = viewerContent
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+        contentHtml = '<code class="hljs">' + wrapLinesHtml(escaped) + '</code>';
+        isHtml = true;
       }
+      showLineNumbers = true;
     }
   }
 
@@ -149,13 +192,14 @@ export default function FileViewerPanel() {
       </div>
       <div
         ref={contentRef}
-        className={`file-viewer-content${viewerRendered && isMarkdown ? ' rendered' : ''}`}
+        className={`file-viewer-content${viewerRendered && isMarkdown ? ' rendered' : ''}${showLineNumbers ? ' line-numbers' : ''}`}
         style={viewerIsError ? { color: 'var(--theme-accent, #ef4444)' } : undefined}
+        onScroll={handleScroll}
       >
         {viewerMode === 'text' && (
           isHtml
             ? <div dangerouslySetInnerHTML={{ __html: contentHtml }} />
-            : contentText
+            : <span>{contentText}</span>
         )}
         {viewerMode === 'image' && (
           <img

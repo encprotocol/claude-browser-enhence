@@ -69,8 +69,10 @@ export interface FileEntry {
 
 export interface RecordingEvent {
   t: number;
-  type: 'i' | 'o';
-  data: string;
+  type: 'i' | 'o' | 'r';
+  data?: string;
+  cols?: number;
+  rows?: number;
 }
 
 export interface RecordingSummary {
@@ -128,7 +130,7 @@ export type ServerMessage =
 
 /** WebSocket message types sent to server */
 export type ClientMessage =
-  | { type: 'create-session'; name: string }
+  | { type: 'create-session'; name: string; cwd?: string }
   | { type: 'switch-session'; sessionId: string }
   | { type: 'close-session'; sessionId: string }
   | { type: 'rename-session'; sessionId: string; name: string }

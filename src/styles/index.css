@@ -755,6 +755,7 @@ header h1 {
   font-family: 'JetBrains Mono', monospace; font-size: 12px;
   line-height: 1.5; color: var(--theme-fg);
   white-space: pre-wrap; word-break: break-all; margin: 0; tab-size: 4;
+  scrollbar-gutter: stable;
 }
 .file-viewer-content::-webkit-scrollbar { width: 6px; }
 .file-viewer-content::-webkit-scrollbar-thumb {
@@ -795,6 +796,32 @@ header h1 {
 .file-viewer-content.rendered th { background: var(--theme-button-bg); }
 .file-viewer-content.rendered hr { border: none; border-top: 1px solid var(--theme-button-border); margin: 1em 0; }
 .file-viewer-content.rendered img { max-width: 100%; border-radius: 4px; }
+
+/* Line numbers in file viewer */
+.file-viewer-content.line-numbers { padding-left: 0; }
+.file-viewer-content.line-numbers code.hljs {
+  counter-reset: line;
+  display: block;
+}
+.file-viewer-content.line-numbers .code-line {
+  display: block;
+  padding-left: 4.5em;
+  position: relative;
+  min-height: 1.5em;
+}
+.file-viewer-content.line-numbers .code-line::before {
+  counter-increment: line;
+  content: counter(line);
+  position: absolute;
+  left: 0;
+  width: 3.5em;
+  padding-right: 0.8em;
+  text-align: right;
+  color: var(--theme-muted);
+  opacity: 0.5;
+  user-select: none;
+  -webkit-user-select: none;
+}
 
 /* Syntax highlighting in file viewer */
 .file-viewer-content .hljs { background: transparent; }
@@ -1112,6 +1139,30 @@ header h1 {
   color: var(--theme-accent);
 }
 
+/* Bring Back dropdown */
+.bring-back-wrapper { position: relative; }
+.bring-back-dropdown {
+  position: absolute; top: 100%; left: 0; margin-top: 4px;
+  background: var(--theme-header);
+  border: 1px solid var(--theme-button-border);
+  border-radius: 8px; padding: 4px 0;
+  min-width: 180px; z-index: 100;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+.bring-back-option {
+  display: block; width: 100%; padding: 7px 12px;
+  background: none; border: none;
+  color: var(--theme-fg); font-size: 13px;
+  cursor: pointer; text-align: left;
+  transition: background 0.1s;
+}
+.bring-back-option:hover { background: var(--theme-button-bg); }
+.bring-back-option:disabled {
+  color: var(--theme-muted); cursor: default;
+  opacity: 0.5;
+}
+.bring-back-option:disabled:hover { background: none; }
+
 /* Recording summary */
 .recording-summary {
   padding: 24px 32px;
@@ -1168,14 +1219,6 @@ header h1 {
 .recording-summary-error {
   color: #ef4444; font-size: 13px; text-align: center;
 }
-
-/* Tab recording dot */
-.tab-recording-dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: #ef4444; flex-shrink: 0;
-  animation: recording-pulse 1.5s ease-in-out infinite;
-}
-@keyframes recording-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
 /* YouTube hidden host */
 #yt-player-host { position: absolute; width: 0; height: 0; overflow: hidden; pointer-events: none; }

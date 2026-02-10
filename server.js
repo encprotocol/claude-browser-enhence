@@ -694,7 +694,7 @@ wss.on('connection', (ws, req) => {
   // Store sendToSession in clientData
   clientData.sendToSession = sendToSession;
 
-  const createSession = (name) => {
+  const createSession = (name, cwd) => {
     const id = `session-${++clientData.sessionCounter}`;
     const sessionName = name || `Shell ${clientData.sessionCounter}`;
 
@@ -705,7 +705,7 @@ wss.on('connection', (ws, req) => {
       name: 'xterm-256color',
       cols: 80,
       rows: 24,
-      cwd: process.env.HOME || '/tmp',
+      cwd: (cwd && fs.existsSync(cwd)) ? cwd : (process.env.HOME || '/tmp'),
       env: {
         ...process.env,
         TERM: 'xterm-256color',
@@ -780,7 +780,7 @@ wss.on('connection', (ws, req) => {
 
       switch (msg.type) {
         case 'create-session': {
-          const id = createSession(msg.name);
+          const id = createSession(msg.name, msg.cwd);
           clientData.activeSessionId = id;
           sendMessage('session-switched', { id });
           break;
@@ -893,6 +893,16 @@ wss.on('connection', (ws, req) => {
           const session = sessions.get(msg.sessionId);
           if (session && session.pty) {
             session.pty.resize(msg.cols, msg.rows);
+            if (session.recording) {
+              session.recording.events.push({
+                t: Date.now() - new Date(session.recording.startedAt).getTime(),
+                type: 'r',
+                cols: msg.cols,
+                rows: msg.rows,
+              });
+              session.recording.cols = msg.cols;
+              session.recording.rows = msg.rows;
+            }
           }
           break;
         }

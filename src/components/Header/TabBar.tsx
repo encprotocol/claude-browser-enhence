@@ -2,7 +2,7 @@ import { useSessionStore } from '@/stores/sessionStore';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useThemeStore } from '@/stores/themeStore';
-import { useRecordingStore } from '@/stores/recordingStore';
+
 
 export default function TabBar() {
   const sessions = useSessionStore((s) => s.sessions);
@@ -11,7 +11,6 @@ export default function TabBar() {
   const showPrompt = useUIStore((s) => s.showPrompt);
   const showConfirm = useUIStore((s) => s.showConfirm);
   const theme = useThemeStore((s) => s.theme);
-  const activeRecordings = useRecordingStore((s) => s.activeRecordings);
 
   const switchSession = (id: string) => {
     if (id === activeSessionId) return;
@@ -41,7 +40,6 @@ export default function TabBar() {
     <div className="tab-bar">
       {Array.from(sessions.values()).map((session) => {
         const isActive = session.id === activeSessionId;
-        const isRecording = activeRecordings.has(session.id);
         return (
           <button
             key={session.id}
@@ -49,7 +47,6 @@ export default function TabBar() {
             style={isActive ? { background: theme.activeTab || theme.background } : undefined}
             onClick={() => switchSession(session.id)}
           >
-            {isRecording && <span className="tab-recording-dot" />}
             <span
               className="tab-name"
               onDoubleClick={(e) => {
