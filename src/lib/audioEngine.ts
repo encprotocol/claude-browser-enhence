@@ -30,6 +30,7 @@ let activeType: TrackType | null = null;
 let endedCallback: (() => void) | null = null;
 let currentVolume = 0.5;
 let pendingYtTrack: Track | null = null;
+let pendingSeekTime: number | null = null;
 
 function getAudio(): HTMLAudioElement {
   if (!audioEl) {
@@ -94,6 +95,10 @@ function createYtPlayer(videoId: string) {
     events: {
       onReady: () => {
         ytPlayer.setVolume(currentVolume * 100);
+        if (pendingSeekTime !== null) {
+          ytPlayer.seekTo(pendingSeekTime, true);
+          pendingSeekTime = null;
+        }
       },
       onStateChange: (event: any) => {
         if (event.data === (window as any).YT.PlayerState.ENDED) {
@@ -172,6 +177,7 @@ export function stop() {
     ytPlayer.stopVideo();
   }
   activeType = null;
+  pendingSeekTime = null;
 }
 
 /** Set volume 0-1 */
@@ -214,12 +220,22 @@ export function getDuration(): number {
   return 0;
 }
 
-/** Seek to position in seconds */
+/** Seek to position in seconds (defers if audio metadata not loaded yet or YT player not ready) */
 export function seek(time: number) {
   if (activeType === 'audio' && audioEl) {
-    audioEl.currentTime = time;
-  } else if (activeType === 'youtube' && ytPlayer?.seekTo) {
-    ytPlayer.seekTo(time, true);
+    if (audioEl.readyState >= 1) {
+      audioEl.currentTime = time;
+    } else {
+      audioEl.addEventListener('loadedmetadata', () => {
+        if (audioEl) audioEl.currentTime = time;
+      }, { once: true });
+    }
+  } else if (activeType === 'youtube') {
+    if (ytPlayer?.seekTo) {
+      ytPlayer.seekTo(time, true);
+    } else {
+      pendingSeekTime = time;
+    }
   }
 }
 

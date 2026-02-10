@@ -221,6 +221,15 @@ export const usePlayerStore = create<PlayerState>()(
           }
         });
 
+        // Periodic position saving every 5 seconds during playback
+        setInterval(() => {
+          const { playing } = get();
+          if (playing) {
+            const pos = audioEngine.getCurrentTime();
+            if (pos > 0) set({ savedPosition: pos });
+          }
+        }, 5000);
+
         // Resume if wasPlaying
         const { wasPlaying, currentTrackId, tracks, savedPosition } = get();
         if (wasPlaying && currentTrackId) {

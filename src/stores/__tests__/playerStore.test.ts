@@ -326,6 +326,30 @@ describe('playerStore', () => {
       usePlayerStore.getState().togglePlayPause(); // pause
       expect(usePlayerStore.getState().savedPosition).toBe(30);
     });
+
+    it('periodic saving updates savedPosition during playback', () => {
+      vi.useFakeTimers();
+      (audioEngine.getCurrentTime as ReturnType<typeof vi.fn>).mockReturnValue(60);
+      usePlayerStore.setState({ playing: true });
+      usePlayerStore.getState().initEngine();
+
+      // Advance 5 seconds — should trigger periodic save
+      vi.advanceTimersByTime(5000);
+      expect(usePlayerStore.getState().savedPosition).toBe(60);
+
+      // Update mock time and advance again
+      (audioEngine.getCurrentTime as ReturnType<typeof vi.fn>).mockReturnValue(65);
+      vi.advanceTimersByTime(5000);
+      expect(usePlayerStore.getState().savedPosition).toBe(65);
+
+      // When not playing, should not update
+      usePlayerStore.setState({ playing: false });
+      (audioEngine.getCurrentTime as ReturnType<typeof vi.fn>).mockReturnValue(99);
+      vi.advanceTimersByTime(5000);
+      expect(usePlayerStore.getState().savedPosition).toBe(65);
+
+      vi.useRealTimers();
+    });
   });
 
   describe('initEngine', () => {

@@ -7,6 +7,7 @@ const mockAudio = {
   volume: 1,
   currentTime: 0,
   duration: 120,
+  readyState: 4,
   play: vi.fn().mockResolvedValue(undefined),
   pause: vi.fn(),
   addEventListener: vi.fn(),
@@ -23,6 +24,7 @@ describe('audioEngine', () => {
     mockAudio.volume = 1;
     mockAudio.currentTime = 0;
     mockAudio.duration = 120;
+    mockAudio.readyState = 4;
     mockAudio.play.mockReset().mockResolvedValue(undefined);
     mockAudio.pause.mockReset();
     mockAudio.addEventListener.mockReset();
@@ -134,10 +136,77 @@ describe('audioEngine', () => {
     expect(engine.getDuration()).toBe(0);
   });
 
-  it('seek sets audio currentTime', () => {
+  it('seek sets audio currentTime when metadata loaded', () => {
     engine.load(audioTrack);
+    mockAudio.readyState = 2; // HAVE_CURRENT_DATA
     engine.seek(55);
     expect(mockAudio.currentTime).toBe(55);
+  });
+
+  it('seek defers when metadata not loaded yet', () => {
+    engine.load(audioTrack);
+    mockAudio.readyState = 0; // HAVE_NOTHING
+    engine.seek(42);
+    // Should NOT have set currentTime yet
+    expect(mockAudio.currentTime).toBe(0);
+    // Should have registered a loadedmetadata listener
+    const call = mockAudio.addEventListener.mock.calls.find(
+      (c: any[]) => c[0] === 'loadedmetadata'
+    );
+    expect(call).toBeDefined();
+    // Simulate metadata loaded — invoke the callback
+    call![1]();
+    expect(mockAudio.currentTime).toBe(42);
+  });
+
+  it('seek stores pending time for YouTube when ytPlayer not ready', async () => {
+    let onReadyCb: (() => void) | null = null;
+    const mockYtPlayer = {
+      loadVideoById: vi.fn(),
+      setVolume: vi.fn(),
+      seekTo: vi.fn(),
+      playVideo: vi.fn(),
+      stopVideo: vi.fn(),
+    };
+    // Mock YT.Player constructor — capture onReady for manual firing
+    (window as any).YT = {
+      Player: function (_el: any, opts: any) {
+        Object.assign(this, mockYtPlayer);
+        onReadyCb = opts.events.onReady;
+      },
+      PlayerState: { ENDED: 0 },
+    };
+
+    // Stub getElementById for the yt-player-host element
+    const mockHost = { id: 'yt-player-host', innerHTML: '', appendChild: vi.fn() };
+    const origGetById = document.getElementById;
+    document.getElementById = vi.fn((id: string) => {
+      if (id === 'yt-player-host') return mockHost as any;
+      return origGetById.call(document, id);
+    }) as any;
+
+    const ytTrack: Track = { id: '2', title: 'YT', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', type: 'youtube' };
+    engine.load(ytTrack);
+
+    // At this point: activeType='youtube', ytPlayer=null, loadYtApi() is pending
+    // Call seek — should store as pending since ytPlayer not ready
+    engine.seek(120);
+
+    // Simulate YT IFrame API finished loading
+    (window as any).onYouTubeIframeAPIReady();
+    // Flush microtasks so loadYtApi().then() → createYtPlayer() runs
+    await new Promise((r) => setTimeout(r, 0));
+
+    // createYtPlayer should have been called, capturing onReady
+    expect(onReadyCb).not.toBeNull();
+    // Fire onReady — this should apply the pending seek
+    onReadyCb!();
+
+    expect(mockYtPlayer.seekTo).toHaveBeenCalledWith(120, true);
+
+    document.getElementById = origGetById;
+    delete (window as any).YT;
+    delete (window as any).onYouTubeIframeAPIReady;
   });
 
   describe('fetchTrackInfo', () => {
