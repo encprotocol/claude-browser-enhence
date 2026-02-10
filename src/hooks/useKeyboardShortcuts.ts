@@ -5,6 +5,7 @@ import { useCorrectionStore } from '@/stores/correctionStore';
 import { useTodoStore } from '@/stores/todoStore';
 import { useNotesStore } from '@/stores/notesStore';
 import { useFileBrowserStore } from '@/stores/fileBrowserStore';
+import { usePlayerStore } from '@/stores/playerStore';
 import { useUIStore } from '@/stores/uiStore';
 
 export function useKeyboardShortcuts() {
@@ -13,6 +14,7 @@ export function useKeyboardShortcuts() {
       // Cmd+B: Toggle file browser
       if (e.metaKey && e.key === 'b') {
         e.preventDefault();
+        usePlayerStore.getState().setPanelOpen(false);
         useFileBrowserStore.getState().toggle();
         return;
       }
@@ -40,6 +42,12 @@ export function useKeyboardShortcuts() {
       if (e.metaKey && e.key === 'k') {
         e.preventDefault();
         useNotesStore.getState().toggle();
+        return;
+      }
+      // Cmd+M: Toggle music playback
+      if (e.metaKey && e.key === 'm') {
+        e.preventDefault();
+        usePlayerStore.getState().togglePlayPause();
         return;
       }
       // Ctrl+Shift+T: New tab

@@ -65,6 +65,16 @@ describe('Component imports', () => {
     const mod = await import('@/components/FileBrowser/FileViewerPanel');
     expect(mod.default).toBeDefined();
   });
+
+  it('imports PlayerButton', async () => {
+    const mod = await import('@/components/Header/PlayerButton');
+    expect(mod.default).toBeDefined();
+  });
+
+  it('imports MusicPanel', async () => {
+    const mod = await import('@/components/Header/MusicPanel');
+    expect(mod.default).toBeDefined();
+  });
 });
 
 describe('Store imports', () => {
@@ -112,6 +122,11 @@ describe('Store imports', () => {
     const mod = await import('@/stores/messageRouter');
     expect(mod.routeMessage).toBeDefined();
   });
+
+  it('imports playerStore', async () => {
+    const mod = await import('@/stores/playerStore');
+    expect(mod.usePlayerStore).toBeDefined();
+  });
 });
 
 describe('Terminal singleton', () => {
@@ -120,6 +135,15 @@ describe('Terminal singleton', () => {
     expect(mod.getTerminalInstance).toBeDefined();
     expect(mod.setTerminalInstance).toBeDefined();
     expect(mod.getTerminalInstance()).toBeNull();
+  });
+});
+
+describe('Lib modules', () => {
+  it('imports audioEngine', async () => {
+    const mod = await import('@/lib/audioEngine');
+    expect(mod.load).toBeDefined();
+    expect(mod.play).toBeDefined();
+    expect(mod.extractYouTubeId).toBeDefined();
   });
 });
 

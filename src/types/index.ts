@@ -1,5 +1,9 @@
 export type CorrectionMode = 'grammar' | 'polish';
 
+export type TrackType = 'youtube' | 'audio';
+export interface Track { id: string; title: string; url: string; type: TrackType; }
+export type RepeatMode = 'none' | 'all' | 'one';
+
 export interface Theme {
   background: string;
   foreground: string;

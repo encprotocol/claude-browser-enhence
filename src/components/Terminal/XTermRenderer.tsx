@@ -207,9 +207,9 @@ export default function XTermRenderer() {
     };
   }, []);
 
-  // React to theme changes
+  // React to theme changes (including rehydration that may have already fired)
   useEffect(() => {
-    const unsub = useThemeStore.subscribe((state) => {
+    const applyTermTheme = (state: ReturnType<typeof useThemeStore.getState>) => {
       const term = termInstanceRef.current;
       if (!term) return;
       const t = state.theme;
@@ -239,7 +239,10 @@ export default function XTermRenderer() {
       term.options.fontSize = state.fontSettings.fontSize;
       term.options.lineHeight = state.fontSettings.lineHeight;
       fitAddonRef.current?.fit();
-    });
+    };
+    const unsub = useThemeStore.subscribe(applyTermTheme);
+    // Apply current state immediately — rehydration may have already completed
+    applyTermTheme(useThemeStore.getState());
     return unsub;
   }, []);
 

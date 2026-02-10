@@ -35,6 +35,12 @@ A browser-based terminal emulator with automatic syntax highlighting, file manag
   - **Grammar**: Fix spelling and grammar errors only
   - **Polish**: Improve expression while preserving meaning
   - Uses Claude AI (Haiku model). **Requires [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed and authenticated on the server.**
+- **Music player** — Built-in background music player with dedicated side panel:
+  - Supports YouTube URLs and direct audio file URLs (mp3, ogg, wav, etc.)
+  - Transport controls: play/pause, previous, next with progress bar and seek
+  - Playback modes: sequential or random order, repeat off/all/one
+  - Drag-and-drop track reordering
+  - Add tracks via URL input, click to play, remove individual tracks
 - **Tabbed settings panel** — Settings organized into Theme and Grammar tabs
 - **Theme support** — 27 built-in themes plus full color customization via settings panel:
   - **Dark**: Synesthesia, Dracula, Tokyo Night, Catppuccin, Rosé Pine, Synthwave '84, Cyberpunk, Nord, Gruvbox, Ayu Dark, One Dark, Monokai, Tinacious Design
@@ -83,7 +89,7 @@ npm test
 │   ├── main.tsx           # React entry point
 │   ├── App.tsx            # Root component
 │   ├── types/index.ts     # Shared TypeScript types
-│   ├── stores/            # Zustand stores (8 stores + messageRouter)
+│   ├── stores/            # Zustand stores (9 stores + messageRouter)
 │   ├── lib/               # Utilities (diff, highlighter, colorUtils, themes, api)
 │   ├── hooks/             # Custom hooks (useKeyboardShortcuts)
 │   ├── components/        # React components (Header, Terminal, FileBrowser, Modals)
@@ -114,6 +120,7 @@ npm test
 | `Cmd+B` | Toggle file browser sidebar |
 | `Cmd+J` | Toggle todo panel |
 | `Cmd+K` | Toggle notes panel |
+| `Cmd+M` | Toggle music playback |
 | `Cmd+X` | Toggle English correction mode |
 | `Shift+Enter` | Send newline without executing |
 | `Ctrl+Shift+T` | New tab |

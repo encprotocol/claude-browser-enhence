@@ -1,9 +1,11 @@
 import TabBar from './TabBar';
+import PlayerButton from './PlayerButton';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useCorrectionStore } from '@/stores/correctionStore';
 import { useTodoStore } from '@/stores/todoStore';
 import { useNotesStore } from '@/stores/notesStore';
 import { useFileBrowserStore } from '@/stores/fileBrowserStore';
+import { usePlayerStore } from '@/stores/playerStore';
 import { useUIStore } from '@/stores/uiStore';
 
 interface HeaderProps {
@@ -20,6 +22,11 @@ export default function Header({ onOpenSettings }: HeaderProps) {
   const toggleTodos = useTodoStore((s) => s.toggle);
   const toggleNotes = useNotesStore((s) => s.toggle);
   const toggleFileBrowser = useFileBrowserStore((s) => s.toggle);
+
+  const handleFileBrowserToggle = () => {
+    usePlayerStore.getState().setPanelOpen(false);
+    toggleFileBrowser();
+  };
 
   const handleCorrectionToggle = () => {
     if (correctionEnabled && !correctionPanelVisible) {
@@ -49,7 +56,8 @@ export default function Header({ onOpenSettings }: HeaderProps) {
         </button>
         <button className="settings-btn" title="Todos (⌘J)" onClick={toggleTodos}>☑</button>
         <button className="settings-btn" title="Notes (⌘K)" onClick={toggleNotes}>📝</button>
-        <button className="settings-btn" title="File Browser (Cmd+B)" onClick={toggleFileBrowser}>📁</button>
+        <button className="settings-btn" title="File Browser (Cmd+B)" onClick={handleFileBrowserToggle}>📁</button>
+        <PlayerButton />
         <button className="settings-btn" title="Theme Settings" onClick={onOpenSettings}>⚙</button>
         <div className="status">
           <div className={`status-dot${connected ? ' connected' : ''}`} />

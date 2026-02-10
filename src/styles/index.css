@@ -749,3 +749,160 @@ header h1 {
 /* Clickable links in terminal */
 .xterm a { color: var(--theme-accent); text-decoration: underline; cursor: pointer; }
 .xterm a:hover { opacity: 0.8; }
+
+/* Player */
+.player-btn-wrapper { position: relative; display: flex; align-items: center; gap: 6px; }
+.settings-btn.player-active { color: var(--theme-accent); border-color: var(--theme-accent); }
+.player-now-playing {
+  color: var(--theme-accent); font-size: 11px; max-width: 120px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* Music panel (right-side overlay) */
+.music-panel {
+  position: absolute; right: 0; top: 0; bottom: 0;
+  width: 280px; z-index: 6;
+  display: flex; flex-direction: column;
+  background: var(--theme-header);
+  border-left: 1px solid var(--theme-button-border);
+  color: var(--theme-fg); font-size: 13px;
+}
+.music-panel-header {
+  display: flex; align-items: center; padding: 8px 10px; gap: 6px;
+  border-bottom: 1px solid var(--theme-button-border); flex-shrink: 0;
+}
+.music-panel-title {
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--theme-muted); flex: 1;
+}
+.music-panel-close {
+  background: none; border: none; color: var(--theme-muted);
+  cursor: pointer; font-size: 14px; padding: 2px 4px;
+  border-radius: 4px; line-height: 1;
+}
+.music-panel-close:hover {
+  color: var(--theme-fg); background: var(--theme-button-bg);
+}
+.music-panel-transport {
+  padding: 10px; border-bottom: 1px solid var(--theme-button-border); flex-shrink: 0;
+}
+.music-panel-mode {
+  padding: 8px 10px; border-bottom: 1px solid var(--theme-button-border); flex-shrink: 0;
+}
+.music-mode-row {
+  display: flex; align-items: center; gap: 4px; margin-bottom: 6px;
+}
+.music-mode-row:last-child { margin-bottom: 0; }
+.music-mode-label {
+  font-size: 11px; color: var(--theme-muted); width: 48px; flex-shrink: 0;
+}
+.music-mode-btn {
+  padding: 3px 8px; background: var(--theme-button-bg);
+  border: 1px solid var(--theme-button-border); border-radius: 4px;
+  color: var(--theme-muted); font-size: 11px; cursor: pointer;
+  transition: all 0.15s;
+}
+.music-mode-btn:hover { color: var(--theme-fg); }
+.music-mode-btn.active { border-color: var(--theme-accent); color: var(--theme-accent); }
+.music-panel-add {
+  display: flex; gap: 6px; padding: 8px 10px;
+  border-bottom: 1px solid var(--theme-button-border); flex-shrink: 0;
+}
+.music-panel-add input {
+  flex: 1; background: var(--theme-bg);
+  border: 1px solid var(--theme-button-border);
+  border-radius: 6px; color: var(--theme-fg);
+  padding: 4px 8px; font-size: 12px;
+  font-family: inherit; outline: none;
+}
+.music-panel-add input:focus { border-color: var(--theme-accent); }
+.music-panel-add button {
+  background: var(--theme-accent); border: none;
+  border-radius: 6px; color: #fff; font-size: 16px; width: 28px; cursor: pointer;
+}
+.music-panel-tracks {
+  flex: 1; overflow-y: auto; padding: 4px 0;
+}
+.music-panel-tracks::-webkit-scrollbar { width: 6px; }
+.music-panel-tracks::-webkit-scrollbar-thumb {
+  background: var(--theme-button-border); border-radius: 3px;
+}
+.music-panel-empty {
+  color: var(--theme-muted); font-size: 12px; padding: 12px 10px; text-align: center;
+}
+.player-track-drag-handle {
+  color: var(--theme-muted); font-size: 10px; cursor: grab;
+  flex-shrink: 0; width: 14px; text-align: center;
+  opacity: 0; transition: opacity 0.15s; user-select: none;
+}
+.player-track-item:hover .player-track-drag-handle { opacity: 1; }
+.player-track-item.dragging { opacity: 0.4; }
+.player-track-item.drag-over {
+  border-top: 2px solid var(--theme-accent); margin-top: -2px;
+}
+
+.player-track-name {
+  color: var(--theme-fg); font-size: 12px; margin-bottom: 8px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.player-controls {
+  display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 8px;
+}
+.player-controls button {
+  background: none; border: none; color: var(--theme-fg);
+  font-size: 16px; cursor: pointer; padding: 2px 4px;
+}
+.player-controls button:hover { color: var(--theme-accent); }
+.player-controls button:disabled { opacity: 0.3; cursor: default; }
+.player-controls button:disabled:hover { color: var(--theme-fg); }
+/* Progress bar */
+.player-progress-row {
+  display: flex; align-items: center; gap: 6px; margin-top: 4px;
+}
+.player-progress-time {
+  font-size: 10px; color: var(--theme-muted); font-family: monospace;
+  min-width: 32px; text-align: center;
+}
+.player-progress-bar {
+  flex: 1; height: 4px; background: var(--theme-button-border);
+  border-radius: 2px; cursor: pointer; position: relative;
+}
+.player-progress-fill {
+  height: 100%; background: var(--theme-accent); border-radius: 2px;
+  transition: width 0.1s linear;
+}
+
+/* Player settings tab */
+.player-add-row { display: flex; gap: 6px; }
+.player-add-row input {
+  flex: 1; background: var(--theme-bg);
+  border: 1px solid var(--theme-button-border);
+  border-radius: 6px; color: var(--theme-fg);
+  padding: 6px 10px; font-size: 14px;
+  font-family: inherit; outline: none;
+}
+.player-add-row input:focus { border-color: var(--theme-accent); }
+.player-add-row button {
+  background: var(--theme-accent); border: none;
+  border-radius: 6px; color: #fff; font-size: 18px; width: 34px; cursor: pointer;
+}
+.player-track-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px; border-radius: 6px; cursor: pointer;
+  transition: background 0.15s;
+}
+.player-track-item:hover { background: var(--theme-button-bg); }
+.player-track-item.active { background: var(--theme-button-bg); border-left: 2px solid var(--theme-accent); }
+.player-track-type { font-size: 14px; flex-shrink: 0; width: 18px; text-align: center; color: var(--theme-muted); }
+.player-track-title {
+  flex: 1; font-size: 13px; color: var(--theme-fg);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.player-track-delete {
+  background: none; border: none; color: var(--theme-muted);
+  font-size: 16px; cursor: pointer; opacity: 0; transition: opacity 0.15s; padding: 0 4px;
+}
+.player-track-item:hover .player-track-delete { opacity: 1; }
+.player-track-delete:hover { color: var(--theme-accent); }
+
+/* YouTube hidden host */
+#yt-player-host { position: absolute; width: 0; height: 0; overflow: hidden; pointer-events: none; }

@@ -67,26 +67,30 @@ export const useThemeStore = create<ThemeState>()(
 
       setTheme: (theme) => {
         set({ theme });
-        applyThemeToDOM(theme);
       },
 
       setFontSettings: (fontSettings) => set({ fontSettings }),
 
       applyTheme: (theme) => {
         set({ theme });
-        applyThemeToDOM(theme);
       },
     }),
     {
       name: 'synesthesia-theme-store',
       partialize: (state) => ({ theme: state.theme, fontSettings: state.fontSettings }),
-      onRehydrate: (_state, _options) => {
-        return (state) => {
-          if (state?.theme) {
-            applyThemeToDOM(state.theme);
-          }
-        };
-      },
     },
   ),
 );
+
+// Module-level subscriber: applies theme to DOM whenever state changes,
+// including persist rehydration (which uses internal setState, bypassing actions).
+// This replaces the unreliable onRehydrate callback.
+let lastTheme: Theme | null = null;
+useThemeStore.subscribe((state) => {
+  if (state.theme !== lastTheme) {
+    lastTheme = state.theme;
+    applyThemeToDOM(state.theme);
+  }
+});
+// Apply the initial/rehydrated theme immediately
+applyThemeToDOM(useThemeStore.getState().theme);

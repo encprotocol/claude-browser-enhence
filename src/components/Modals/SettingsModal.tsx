@@ -249,6 +249,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
             </div>
           </>
         )}
+
       </div>
     </div>
   );

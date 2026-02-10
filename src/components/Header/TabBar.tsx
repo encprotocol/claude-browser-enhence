@@ -55,7 +55,8 @@ export default function TabBar() {
             >
               {session.name}
             </span>
-            <button
+            <span
+              role="button"
               className="close-btn"
               onClick={(e) => {
                 e.stopPropagation();
@@ -63,7 +64,7 @@ export default function TabBar() {
               }}
             >
               &times;
-            </button>
+            </span>
           </button>
         );
       })}
