@@ -9,6 +9,7 @@ export default function FileSidebar() {
   useEffect(() => {
     if (visible) {
       useFileBrowserStore.getState().requestInitialData();
+      useFileBrowserStore.getState().reestablishFileWatch();
     }
   }, [visible]);
 
@@ -16,8 +17,8 @@ export default function FileSidebar() {
 
   return (
     <div className="file-sidebar">
-      <FileBrowserPanel />
       <FileViewerPanel />
+      <FileBrowserPanel />
     </div>
   );
 }

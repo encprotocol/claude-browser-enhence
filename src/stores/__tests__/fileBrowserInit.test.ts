@@ -52,4 +52,31 @@ describe('fileBrowser initial data request', () => {
 
     expect(mockSend).not.toHaveBeenCalled();
   });
+
+  it('requestInitialData sends list-directory when rehydrated (currentRoot set, dirCache empty)', () => {
+    const mockSend = vi.fn();
+    useConnectionStore.setState({ connected: true, sendMessage: mockSend });
+    useSessionStore.setState({ activeSessionId: 'session-1' });
+
+    useFileBrowserStore.setState({
+      currentRoot: '/home/user/project',
+      expandedDirs: new Set(['/home/user/project', '/home/user/project/src']),
+      dirCache: new Map(),
+      showHidden: true,
+    });
+
+    useFileBrowserStore.getState().requestInitialData();
+
+    expect(mockSend).toHaveBeenCalledWith('list-directory', {
+      sessionId: 'session-1',
+      path: '/home/user/project',
+      showHidden: true,
+    });
+    expect(mockSend).toHaveBeenCalledWith('list-directory', {
+      sessionId: 'session-1',
+      path: '/home/user/project/src',
+      showHidden: true,
+    });
+    expect(mockSend).not.toHaveBeenCalledWith('get-cwd', expect.anything());
+  });
 });
