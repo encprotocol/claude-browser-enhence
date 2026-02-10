@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { RecordingMeta, Recording } from '@/types';
 import { fetchRecordings, fetchRecording, deleteRecording as apiDeleteRecording } from '@/lib/api';
+import { closeAllPopups } from '@/lib/popupManager';
 
 interface RecordingState {
   recordings: RecordingMeta[];
@@ -52,7 +53,9 @@ export const useRecordingStore = create<RecordingState>((set, get) => ({
   },
 
   toggle: () => {
-    set({ visible: !get().visible });
+    const willOpen = !get().visible;
+    if (willOpen) closeAllPopups();
+    set({ visible: willOpen });
   },
 
   setVisible: (visible) => set({ visible }),

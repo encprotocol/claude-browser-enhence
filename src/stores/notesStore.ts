@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Note } from '@/types';
 import { fetchNotes, saveNotes, deleteNote as apiDeleteNote, uploadFile } from '@/lib/api';
+import { closeAllPopups } from '@/lib/popupManager';
 
 interface NotesState {
   notes: Note[];
@@ -70,10 +71,12 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
   toggle: () => {
     const { visible, editingNoteId } = get();
+    const willOpen = !visible;
     if (editingNoteId) {
       set({ editingNoteId: null });
     }
-    set({ visible: !visible });
+    if (willOpen) closeAllPopups();
+    set({ visible: willOpen });
   },
 
   setVisible: (visible) => set({ visible }),

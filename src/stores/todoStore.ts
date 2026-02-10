@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Todo } from '@/types';
 import { fetchTodos, saveTodos } from '@/lib/api';
+import { closeAllPopups } from '@/lib/popupManager';
 
 interface TodoState {
   todos: Todo[];
@@ -46,6 +47,10 @@ export const useTodoStore = create<TodoState>((set, get) => ({
     saveTodos(todos);
   },
 
-  toggle: () => set((s) => ({ visible: !s.visible })),
+  toggle: () => {
+    const willOpen = !get().visible;
+    if (willOpen) closeAllPopups();
+    set({ visible: willOpen });
+  },
   setVisible: (visible) => set({ visible }),
 }));
