@@ -48,6 +48,12 @@ A browser-based terminal emulator with automatic syntax highlighting, file manag
   - **Light**: GitHub, One Light, Ayu Light, Solarized Light, Catppuccin Latte, Rosé Pine Dawn, Tinacious Design Light
 - **Clickable links** — URLs in terminal output open in a new tab
 - **Image paste & preview** — Paste images from clipboard into the terminal; displayed as `[Image #N]` markers with hover preview and full-size viewer
+- **Terminal recording** — Record and replay terminal sessions:
+  - Start/stop recording via tab context or keyboard shortcut
+  - Recordings capture all terminal output with timestamps
+  - Full-screen xterm.js playback that fills the modal with scrollable content
+  - Browse all recordings in a dedicated modal with metadata (date, duration, size)
+  - Delete individual recordings
 - **Terminal resize** — Automatic terminal resizing to fit the browser window
 - **Font settings** — Adjustable font size and line height via settings panel
 
@@ -112,6 +118,9 @@ npm test
 | `DELETE` | `/api/notes/:id` | Delete note and clean up uploaded images |
 | `POST` | `/api/upload` | Upload file (base64 JSON) |
 | `GET` | `/api/file` | Read file contents (for file browser) |
+| `GET` | `/api/recordings` | List all recording metadata |
+| `GET` | `/api/recordings/:id` | Get full recording with events |
+| `DELETE` | `/api/recordings/:id` | Delete a recording |
 
 ## Keyboard Shortcuts
 
@@ -121,6 +130,7 @@ npm test
 | `Cmd+J` | Toggle todo panel |
 | `Cmd+K` | Toggle notes panel |
 | `Cmd+M` | Toggle music playback |
+| `Cmd+H` | Toggle recordings panel |
 | `Cmd+X` | Toggle English correction mode |
 | `Shift+Enter` | Send newline without executing |
 | `Ctrl+Shift+T` | New tab |

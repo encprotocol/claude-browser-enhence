@@ -3,6 +3,7 @@ import { useSessionStore } from '@/stores/sessionStore';
 import { useCorrectionStore } from '@/stores/correctionStore';
 import { useFileBrowserStore } from '@/stores/fileBrowserStore';
 import { useConnectionStore } from '@/stores/connectionStore';
+import { useRecordingStore } from '@/stores/recordingStore';
 import { getTerminalInstance } from '@/terminal/terminalInstance';
 import { highlight } from '@/lib/highlighter';
 import { computeWordDiff } from '@/lib/diff';
@@ -145,6 +146,14 @@ export function routeMessage(msg: ServerMessage) {
 
     case 'file-update':
       fileBrowserStore.handleFileUpdate(msg.path, msg.content, msg.error);
+      break;
+
+    case 'recording-started':
+      useRecordingStore.getState().setActiveRecording(msg.sessionId, msg.recordingId);
+      break;
+
+    case 'recording-stopped':
+      useRecordingStore.getState().clearActiveRecording(msg.sessionId);
       break;
   }
 }

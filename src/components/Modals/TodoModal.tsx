@@ -56,7 +56,7 @@ export default function TodoModal() {
             placeholder="Add a todo..."
             onKeyDown={handleInputKeyDown}
           />
-          <button onClick={handleAdd}>Add</button>
+          <button onClick={handleAdd}>+</button>
         </div>
         <div className="todo-list">
           {todos.map((todo) => (

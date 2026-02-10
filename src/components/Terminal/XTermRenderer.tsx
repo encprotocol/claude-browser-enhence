@@ -10,6 +10,7 @@ import { useThemeStore } from '@/stores/themeStore';
 import { useCorrectionStore } from '@/stores/correctionStore';
 import { useFileBrowserStore } from '@/stores/fileBrowserStore';
 import { useUIStore } from '@/stores/uiStore';
+import { buildXtermTheme } from '@/lib/xtermTheme';
 
 export default function XTermRenderer() {
   const termRef = useRef<HTMLDivElement>(null);
@@ -24,29 +25,7 @@ export default function XTermRenderer() {
     const fontSettings = useThemeStore.getState().fontSettings;
 
     const term = new Terminal({
-      theme: {
-        background: theme.background,
-        foreground: theme.foreground,
-        cursor: theme.cursor,
-        cursorAccent: theme.background,
-        selection: theme.selection + '4d',
-        black: theme.black,
-        red: theme.red,
-        green: theme.green,
-        yellow: theme.yellow,
-        blue: theme.blue,
-        magenta: theme.magenta,
-        cyan: theme.cyan,
-        white: theme.white,
-        brightBlack: theme.brightBlack || '#6b7280',
-        brightRed: theme.red,
-        brightGreen: theme.green,
-        brightYellow: theme.yellow,
-        brightBlue: theme.blue,
-        brightMagenta: theme.magenta,
-        brightCyan: theme.cyan,
-        brightWhite: theme.white,
-      },
+      theme: buildXtermTheme(theme),
       fontFamily: '"JetBrains Mono", "Fira Code", "SF Mono", Menlo, Monaco, monospace',
       fontSize: fontSettings.fontSize,
       lineHeight: fontSettings.lineHeight,
@@ -212,30 +191,7 @@ export default function XTermRenderer() {
     const applyTermTheme = (state: ReturnType<typeof useThemeStore.getState>) => {
       const term = termInstanceRef.current;
       if (!term) return;
-      const t = state.theme;
-      term.options.theme = {
-        background: t.background,
-        foreground: t.foreground,
-        cursor: t.cursor,
-        cursorAccent: t.background,
-        selection: t.selection + '4d',
-        black: t.black,
-        red: t.red,
-        green: t.green,
-        yellow: t.yellow,
-        blue: t.blue,
-        magenta: t.magenta,
-        cyan: t.cyan,
-        white: t.white,
-        brightBlack: t.brightBlack || '#6b7280',
-        brightRed: t.red,
-        brightGreen: t.green,
-        brightYellow: t.yellow,
-        brightBlue: t.blue,
-        brightMagenta: t.magenta,
-        brightCyan: t.cyan,
-        brightWhite: t.white,
-      };
+      term.options.theme = buildXtermTheme(state.theme);
       term.options.fontSize = state.fontSettings.fontSize;
       term.options.lineHeight = state.fontSettings.lineHeight;
       fitAddonRef.current?.fit();

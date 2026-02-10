@@ -9,6 +9,7 @@ import FileSidebar from '@/components/FileBrowser/FileSidebar';
 import MusicPanel from '@/components/Header/MusicPanel';
 import TodoModal from '@/components/Modals/TodoModal';
 import NotesModal from '@/components/Modals/NotesModal';
+import RecordingsModal from '@/components/Modals/RecordingsModal';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useUIStore } from '@/stores/uiStore';
 import { usePlayerStore } from '@/stores/playerStore';
@@ -38,6 +39,7 @@ export default function App() {
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <TodoModal />
       <NotesModal />
+      <RecordingsModal />
 
       {/* Image modal */}
       {imageModalSrc && (

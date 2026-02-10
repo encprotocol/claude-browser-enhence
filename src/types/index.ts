@@ -67,6 +67,28 @@ export interface FileEntry {
   path: string;
 }
 
+export interface RecordingEvent {
+  t: number;
+  type: 'i' | 'o';
+  data: string;
+}
+
+export interface RecordingMeta {
+  id: string;
+  sessionId: string;
+  sessionName: string;
+  cwd: string;
+  startedAt: string;
+  endedAt: string | null;
+  eventCount: number;
+  cols?: number;
+  rows?: number;
+}
+
+export interface Recording extends RecordingMeta {
+  events: RecordingEvent[];
+}
+
 export interface ImageCacheEntry {
   id: number;
   data: string;
@@ -87,7 +109,9 @@ export type ServerMessage =
   | { type: 'cwd-result'; cwd: string; home: string }
   | { type: 'directory-listing'; path: string; entries?: FileEntry[]; error?: string }
   | { type: 'file-content'; path: string; content?: string; name?: string; error?: string }
-  | { type: 'file-update'; path: string; content?: string; error?: string };
+  | { type: 'file-update'; path: string; content?: string; error?: string }
+  | { type: 'recording-started'; sessionId: string; recordingId: string }
+  | { type: 'recording-stopped'; sessionId: string; recordingId: string };
 
 /** WebSocket message types sent to server */
 export type ClientMessage =

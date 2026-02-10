@@ -5,6 +5,7 @@ import { useCorrectionStore } from '@/stores/correctionStore';
 import { useTodoStore } from '@/stores/todoStore';
 import { useNotesStore } from '@/stores/notesStore';
 import { useFileBrowserStore } from '@/stores/fileBrowserStore';
+import { useRecordingStore } from '@/stores/recordingStore';
 import { usePlayerStore } from '@/stores/playerStore';
 import { useUIStore } from '@/stores/uiStore';
 
@@ -42,6 +43,12 @@ export function useKeyboardShortcuts() {
       if (e.metaKey && e.key === 'k') {
         e.preventDefault();
         useNotesStore.getState().toggle();
+        return;
+      }
+      // Cmd+H: Toggle recordings
+      if (e.metaKey && e.key === 'h') {
+        e.preventDefault();
+        useRecordingStore.getState().toggle();
         return;
       }
       // Cmd+M: Toggle music playback

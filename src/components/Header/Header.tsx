@@ -5,6 +5,7 @@ import { useCorrectionStore } from '@/stores/correctionStore';
 import { useTodoStore } from '@/stores/todoStore';
 import { useNotesStore } from '@/stores/notesStore';
 import { useFileBrowserStore } from '@/stores/fileBrowserStore';
+import { useRecordingStore } from '@/stores/recordingStore';
 import { usePlayerStore } from '@/stores/playerStore';
 import { useUIStore } from '@/stores/uiStore';
 
@@ -21,6 +22,7 @@ export default function Header({ onOpenSettings }: HeaderProps) {
   const correctionPanelVisible = useCorrectionStore((s) => s.panelVisible);
   const toggleTodos = useTodoStore((s) => s.toggle);
   const toggleNotes = useNotesStore((s) => s.toggle);
+  const toggleRecordings = useRecordingStore((s) => s.toggle);
   const toggleFileBrowser = useFileBrowserStore((s) => s.toggle);
 
   const handleFileBrowserToggle = () => {
@@ -56,6 +58,7 @@ export default function Header({ onOpenSettings }: HeaderProps) {
         </button>
         <button className="settings-btn" title="Todos (⌘J)" onClick={toggleTodos}>☑</button>
         <button className="settings-btn" title="Notes (⌘K)" onClick={toggleNotes}>📝</button>
+        <button className="settings-btn" title="Recordings (⌘H)" onClick={toggleRecordings}>⏺</button>
         <button className="settings-btn" title="File Browser (Cmd+B)" onClick={handleFileBrowserToggle}>📁</button>
         <PlayerButton />
         <button className="settings-btn" title="Theme Settings" onClick={onOpenSettings}>⚙</button>

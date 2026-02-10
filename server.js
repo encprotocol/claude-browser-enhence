@@ -16,6 +16,8 @@ app.use(express.static(clientDir));
 
 // --- Persistent JSON store ---
 const DATA_DIR = path.join(__dirname, 'data');
+const RECORDINGS_DIR = path.join(DATA_DIR, 'recordings');
+fs.mkdirSync(RECORDINGS_DIR, { recursive: true });
 
 function readJSON(file, fallback) {
   try {
@@ -70,6 +72,131 @@ app.post('/api/upload', (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// --- Recordings ---
+function generateRecordingId() {
+  return 'rec-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+}
+
+function flushRecording(recording) {
+  try {
+    fs.writeFileSync(
+      path.join(RECORDINGS_DIR, recording.id + '.json'),
+      JSON.stringify(recording)
+    );
+  } catch (err) {
+    console.error('Failed to flush recording:', err.message);
+  }
+}
+
+function getCwdForPid(pid) {
+  try {
+    const result = execSync(
+      `lsof -p ${pid} -a -d cwd -Fn | grep ^n | cut -c2-`,
+      { timeout: 3000, encoding: 'utf8' }
+    ).trim();
+    return result || (process.env.HOME || '/tmp');
+  } catch {
+    return process.env.HOME || '/tmp';
+  }
+}
+
+function getClaudeStatusPerSession(sessions) {
+  const result = new Map();
+  for (const [id, session] of sessions) {
+    if (!session.pty || !session.pty.pid) {
+      result.set(id, false);
+      continue;
+    }
+    try {
+      execSync(`pgrep -f -P ${session.pty.pid} claude`, { stdio: 'ignore' });
+      result.set(id, true);
+    } catch {
+      result.set(id, false);
+    }
+  }
+  return result;
+}
+
+function startRecording(session, clientData) {
+  const id = generateRecordingId();
+  const cwd = session.pty ? getCwdForPid(session.pty.pid) : (process.env.HOME || '/tmp');
+  const recording = {
+    id,
+    sessionId: session.id,
+    sessionName: session.name,
+    cwd,
+    cols: session.pty ? session.pty.cols : 80,
+    rows: session.pty ? session.pty.rows : 24,
+    startedAt: new Date().toISOString(),
+    endedAt: null,
+    events: [],
+  };
+  session.recording = recording;
+  session.claudeRunning = true;
+  flushRecording(recording);
+  if (clientData.sendMessage) {
+    clientData.sendMessage('recording-started', { sessionId: session.id, recordingId: id });
+  }
+  console.log(`Recording started: ${id} for session ${session.id}`);
+}
+
+function stopRecording(session, clientData) {
+  const recording = session.recording;
+  if (!recording) return;
+  recording.endedAt = new Date().toISOString();
+  flushRecording(recording);
+  const recordingId = recording.id;
+  session.recording = null;
+  session.claudeRunning = false;
+  if (clientData.sendMessage) {
+    clientData.sendMessage('recording-stopped', { sessionId: session.id, recordingId });
+  }
+  console.log(`Recording stopped: ${recordingId} for session ${session.id}`);
+}
+
+app.get('/api/recordings', (req, res) => {
+  try {
+    const files = fs.readdirSync(RECORDINGS_DIR).filter(f => f.endsWith('.json'));
+    const metas = [];
+    for (const file of files) {
+      try {
+        const data = JSON.parse(fs.readFileSync(path.join(RECORDINGS_DIR, file), 'utf8'));
+        metas.push({
+          id: data.id,
+          sessionId: data.sessionId,
+          sessionName: data.sessionName,
+          cwd: data.cwd,
+          cols: data.cols,
+          rows: data.rows,
+          startedAt: data.startedAt,
+          endedAt: data.endedAt,
+          eventCount: data.events ? data.events.length : 0,
+        });
+      } catch {}
+    }
+    metas.sort((a, b) => new Date(b.startedAt) - new Date(a.startedAt));
+    res.json(metas);
+  } catch {
+    res.json([]);
+  }
+});
+
+app.get('/api/recordings/:id', (req, res) => {
+  const filePath = path.join(RECORDINGS_DIR, req.params.id + '.json');
+  try {
+    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    res.json(data);
+  } catch {
+    res.status(404).json({ error: 'Recording not found' });
+  }
+});
+
+app.delete('/api/recordings/:id', (req, res) => {
+  const filePath = path.join(RECORDINGS_DIR, req.params.id + '.json');
+  try { fs.unlinkSync(filePath); } catch {}
+  res.json({ ok: true });
 });
 
 app.get('/api/file', (req, res) => {
@@ -138,8 +265,11 @@ setInterval(() => {
   const now = Date.now();
   for (const [clientId, data] of clientSessions) {
     if (!clientConnections.has(clientId) && now - data.lastSeen > SESSION_TIMEOUT) {
-      // Kill any PTY processes
+      // Finalize any active recordings and kill PTY processes
       for (const session of data.sessions.values()) {
+        if (session.recording) {
+          stopRecording(session, data);
+        }
         if (session.pty) {
           session.pty.kill();
         }
@@ -150,6 +280,36 @@ setInterval(() => {
     }
   }
 }, 60000);
+
+// Poll Claude status per session every 3s — detect start/stop transitions
+setInterval(() => {
+  for (const [clientId, data] of clientSessions) {
+    if (!clientConnections.has(clientId)) continue;
+    const sessions = data.sessions;
+    const statusMap = getClaudeStatusPerSession(sessions);
+    for (const [sessionId, running] of statusMap) {
+      const session = sessions.get(sessionId);
+      if (!session) continue;
+      const wasRunning = session.claudeRunning || false;
+      if (running && !wasRunning) {
+        startRecording(session, data);
+      } else if (!running && wasRunning) {
+        stopRecording(session, data);
+      }
+    }
+  }
+}, 3000);
+
+// Flush active recordings to disk every 30s
+setInterval(() => {
+  for (const [, data] of clientSessions) {
+    for (const session of data.sessions.values()) {
+      if (session.recording) {
+        flushRecording(session.recording);
+      }
+    }
+  }
+}, 30000);
 
 function cleanupClientWatchers(clientId) {
   const watchers = clientFileWatchers.get(clientId);
@@ -243,12 +403,22 @@ wss.on('connection', (ws, req) => {
       id,
       name: sessionName,
       pty: ptyProcess,
-      history: []
+      history: [],
+      recording: null,
+      claudeRunning: false,
     };
     sessions.set(id, session);
 
     // Handle PTY data events - use clientData.sendToSession for current connection
     ptyProcess.onData((data) => {
+      const sess = sessions.get(id);
+      if (sess && sess.recording) {
+        sess.recording.events.push({
+          t: Date.now() - new Date(sess.recording.startedAt).getTime(),
+          type: 'o',
+          data,
+        });
+      }
       clientData.sendToSession(id, data);
     });
 
@@ -312,6 +482,9 @@ wss.on('connection', (ws, req) => {
         case 'close-session': {
           const session = sessions.get(msg.sessionId);
           if (session) {
+            if (session.recording) {
+              stopRecording(session, clientData);
+            }
             if (session.pty) {
               session.pty.kill();
             }
@@ -416,6 +589,14 @@ wss.on('connection', (ws, req) => {
         case 'input': {
           const session = sessions.get(msg.sessionId);
           if (!session || !session.pty) break;
+
+          if (session.recording) {
+            session.recording.events.push({
+              t: Date.now() - new Date(session.recording.startedAt).getTime(),
+              type: 'i',
+              data: msg.data,
+            });
+          }
 
           // Send input directly to PTY
           session.pty.write(msg.data);

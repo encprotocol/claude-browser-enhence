@@ -1,4 +1,4 @@
-import type { Todo, Note } from '@/types';
+import type { Todo, Note, RecordingMeta, Recording } from '@/types';
 
 export async function fetchTodos(): Promise<Todo[]> {
   const res = await fetch('/api/todos');
@@ -30,6 +30,22 @@ export async function saveNotes(notes: Note[]): Promise<void> {
 
 export async function deleteNote(id: string): Promise<void> {
   await fetch(`/api/notes/${id}`, { method: 'DELETE' });
+}
+
+export async function fetchRecordings(): Promise<RecordingMeta[]> {
+  const res = await fetch('/api/recordings');
+  const arr = await res.json();
+  return Array.isArray(arr) ? arr : [];
+}
+
+export async function fetchRecording(id: string): Promise<Recording | null> {
+  const res = await fetch(`/api/recordings/${id}`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function deleteRecording(id: string): Promise<void> {
+  await fetch(`/api/recordings/${id}`, { method: 'DELETE' });
 }
 
 export async function uploadFile(name: string, base64Data: string): Promise<string> {
