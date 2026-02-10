@@ -55,6 +55,7 @@ A browser-based terminal emulator with automatic syntax highlighting, file manag
   - AI-generated summaries (abstract + detail) via active LLM provider
   - Browse all recordings in a dedicated modal with metadata (date, duration, first input)
   - Delete individual recordings
+- **Fullscreen mode** — Toggle OS-level fullscreen via header button (⛶), terminal auto-resizes to fill viewport
 - **Terminal resize** — Automatic terminal resizing to fit the browser window
 - **Font settings** — Adjustable font size and line height via settings panel
 

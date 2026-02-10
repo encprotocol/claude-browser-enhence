@@ -16,8 +16,18 @@ export function mountRecordingPlayer(
 ): () => void {
   const state = useThemeStore.getState();
   const { fontSize, lineHeight } = state.fontSettings;
-  const cols = recording.cols || 80;
-  const rows = recording.rows || 24;
+
+  // Trim events before first input (removes welcome banner / header noise)
+  const firstInputIdx = recording.events.findIndex(ev => ev.type === 'i');
+  const firstInputTime = firstInputIdx >= 0 ? recording.events[firstInputIdx].t : -1;
+  const events = firstInputTime >= 0
+    ? recording.events.filter(ev => ev.t >= firstInputTime && ev.type !== 'i')
+    : recording.events.filter(ev => ev.type !== 'i');
+
+  // Determine initial cols/rows: prefer first resize in full recording, fall back to meta
+  const firstResize = recording.events.find(ev => ev.type === 'r');
+  const cols = firstResize?.cols || recording.cols || 80;
+  const rows = firstResize?.rows || recording.rows || 24;
 
   const term = new Terminal({
     cols,
@@ -32,37 +42,59 @@ export function mountRecordingPlayer(
 
   term.open(container);
 
-  // Expand cols and rows to fill the container
-  const cellWidth = (term as any)._core?._renderService?.dimensions?.css?.cell?.width;
-  const cellHeight = (term as any)._core?._renderService?.dimensions?.css?.cell?.height;
-  const containerWidth = container.clientWidth;
-  const containerHeight = container.clientHeight;
-
-  let fitCols = cols;
-  let fitRows = rows;
-  if (containerWidth > 0 && cellWidth && cellWidth > 0) {
-    fitCols = Math.max(cols, Math.floor(containerWidth / cellWidth));
-  }
-  if (containerHeight > 0 && cellHeight && cellHeight > 0) {
-    fitRows = Math.max(rows, Math.floor(containerHeight / cellHeight));
-  }
-  if (fitCols !== cols || fitRows !== rows) {
-    term.resize(fitCols, fitRows);
-  }
-
-  // Write all output events then scroll to top
-  const outputEvents = recording.events.filter(ev => ev.type === 'o');
-
-  if (outputEvents.length === 0) {
-    term.scrollToTop();
-  } else {
-    for (let i = 0; i < outputEvents.length - 1; i++) {
-      term.write(outputEvents[i].data);
+  // Helper: compute how many rows fit the container, keeping recorded cols
+  const computeFitRows = () => {
+    const cellHeight = (term as any)._core?._renderService?.dimensions?.css?.cell?.height;
+    const containerHeight = container.clientHeight;
+    if (containerHeight > 0 && cellHeight && cellHeight > 0) {
+      return Math.max(rows, Math.floor(containerHeight / cellHeight));
     }
-    term.write(outputEvents[outputEvents.length - 1].data, () => {
+    return rows;
+  };
+
+  // Watch for container resizes (e.g. entering/exiting fullscreen)
+  const ro = new ResizeObserver(() => {
+    const fitRows = computeFitRows();
+    term.resize(cols, fitRows);
+  });
+  ro.observe(container);
+
+  // Wait for browser layout so xterm's renderer initializes dimensions
+  let rafId: number | null = null;
+  rafId = requestAnimationFrame(() => {
+    rafId = null;
+
+    // Expand rows to fill the container height, but keep original cols
+    // to preserve the line wrapping from the recorded session
+    const fitRows = computeFitRows();
+    if (fitRows !== rows) {
+      term.resize(cols, fitRows);
+    }
+
+    // Replay output and resize events in order, then scroll to top
+    const playable = events.filter(ev => ev.type === 'o' || ev.type === 'r');
+
+    if (playable.length === 0) {
       term.scrollToTop();
-    });
-  }
+    } else {
+      for (let i = 0; i < playable.length; i++) {
+        const ev = playable[i];
+        if (ev.type === 'r' && ev.cols && ev.rows) {
+          term.resize(ev.cols, ev.rows);
+        } else if (ev.type === 'o' && ev.data) {
+          if (i === playable.length - 1) {
+            term.write(ev.data, () => term.scrollToTop());
+          } else {
+            term.write(ev.data);
+          }
+        }
+      }
+      // If last event was a resize (not output), still scroll to top
+      if (playable[playable.length - 1].type !== 'o') {
+        term.scrollToTop();
+      }
+    }
+  });
 
   // Sync theme changes
   const unsub = useThemeStore.subscribe((s) => {
@@ -72,6 +104,8 @@ export function mountRecordingPlayer(
   });
 
   return () => {
+    if (rafId != null) cancelAnimationFrame(rafId);
+    ro.disconnect();
     unsub();
     term.dispose();
   };
