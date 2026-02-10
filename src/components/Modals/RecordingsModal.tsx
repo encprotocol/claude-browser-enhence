@@ -95,20 +95,14 @@ export default function RecordingsModal() {
               recordings.map((rec) => (
                 <div
                   key={rec.id}
-                  className="recordings-card"
+                  className="recordings-row"
                   onClick={() => useRecordingStore.getState().viewRecording(rec.id)}
                 >
-                  <div className="recordings-card-header">
-                    <span className="recordings-card-name">{rec.sessionName}</span>
-                    <span className="recordings-card-date">{formatDate(rec.startedAt)}</span>
-                  </div>
-                  <div className="recordings-card-cwd">{rec.cwd}</div>
-                  <div className="recordings-card-meta">
-                    <span>{formatDuration(rec.startedAt, rec.endedAt)}</span>
-                    <span>{rec.eventCount} events</span>
-                  </div>
+                  <span className="recordings-row-path">{rec.cwd}</span>
+                  {rec.firstInput && <span className="recordings-row-input">{rec.firstInput}</span>}
+                  <span className="recordings-row-date">{formatDate(rec.startedAt)}</span>
                   <button
-                    className="recordings-card-delete"
+                    className="recordings-row-delete"
                     title="Delete recording"
                     onClick={(e) => {
                       e.stopPropagation();

@@ -163,6 +163,37 @@ app.get('/api/recordings', (req, res) => {
     for (const file of files) {
       try {
         const data = JSON.parse(fs.readFileSync(path.join(RECORDINGS_DIR, file), 'utf8'));
+        // Extract first input line from events
+        let firstInput = '';
+        if (data.events) {
+          // The first typed character may land in an output event (echoed)
+          // before the recording captures it as input. Grab it.
+          let prefix = '';
+          for (const ev of data.events) {
+            if (ev.type === 'i') break;
+            if (ev.type === 'o' && !prefix) {
+              const plain = ev.data
+                .replace(/\x1b\[[^a-zA-Z]*[a-zA-Z]/g, '')
+                .replace(/\x1b\[\?[0-9]*[a-z]/g, '')
+                .replace(/[\x00-\x1f\x7f]/g, '')
+                .trim();
+              if (plain.length > 0) prefix = plain[0];
+            }
+          }
+          let buf = '';
+          for (const ev of data.events) {
+            if (ev.type === 'i') {
+              buf += ev.data;
+              const nlIdx = buf.search(/[\r\n]/);
+              if (nlIdx !== -1) {
+                buf = buf.slice(0, nlIdx);
+                break;
+              }
+            }
+          }
+          buf = buf.replace(/[\x00-\x1f\x7f]/g, '').trim();
+          firstInput = (prefix + buf).trim();
+        }
         metas.push({
           id: data.id,
           sessionId: data.sessionId,
@@ -173,6 +204,7 @@ app.get('/api/recordings', (req, res) => {
           startedAt: data.startedAt,
           endedAt: data.endedAt,
           eventCount: data.events ? data.events.length : 0,
+          firstInput: firstInput || null,
         });
       } catch {}
     }
@@ -656,6 +688,7 @@ wss.on('connection', (ws, req) => {
         }
 
         case 'read-file': {
+          if (!msg.path) break;
           const homeDir = process.env.HOME || '/tmp';
           const filePath = path.resolve(msg.path);
           if (!filePath.startsWith(homeDir)) {
@@ -685,6 +718,7 @@ wss.on('connection', (ws, req) => {
         }
 
         case 'watch-file': {
+          if (!msg.path) break;
           const homeDir = process.env.HOME || '/tmp';
           const filePath = path.resolve(msg.path);
           if (!filePath.startsWith(homeDir)) break;
@@ -739,6 +773,7 @@ wss.on('connection', (ws, req) => {
         }
 
         case 'unwatch-file': {
+          if (!msg.path) break;
           const filePath = path.resolve(msg.path);
           unwatchFile(clientId, filePath);
           break;

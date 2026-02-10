@@ -51,10 +51,14 @@ export function useKeyboardShortcuts() {
         useRecordingStore.getState().toggle();
         return;
       }
-      // Cmd+M: Toggle music playback
+      // Cmd+M: Toggle music panel
       if (e.metaKey && e.key === 'm') {
         e.preventDefault();
-        usePlayerStore.getState().togglePlayPause();
+        const willOpen = !usePlayerStore.getState().panelOpen;
+        if (willOpen) {
+          useFileBrowserStore.getState().setVisible(false);
+        }
+        usePlayerStore.getState().togglePanel();
         return;
       }
       // Ctrl+Shift+T: New tab

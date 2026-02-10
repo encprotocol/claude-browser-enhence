@@ -83,6 +83,7 @@ export interface RecordingMeta {
   eventCount: number;
   cols?: number;
   rows?: number;
+  firstInput?: string | null;
 }
 
 export interface Recording extends RecordingMeta {

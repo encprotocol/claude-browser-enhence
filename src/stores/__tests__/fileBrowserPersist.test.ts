@@ -111,8 +111,7 @@ describe('fileBrowser persistence', () => {
       useFileBrowserStore.getState().reestablishFileWatch();
 
       expect(mockSend).toHaveBeenCalledWith('watch-file', {
-        sessionId: 'session-1',
-        filePath: '/home/user/file.txt',
+        path: '/home/user/file.txt',
       });
     });
 
@@ -150,8 +149,7 @@ describe('fileBrowser persistence', () => {
       // Image files use HTTP URL, no WS watch needed for text content
       // but they do watch for file changes — so watch-file IS sent
       expect(mockSend).toHaveBeenCalledWith('watch-file', {
-        sessionId: 'session-1',
-        filePath: '/home/user/pic.png',
+        path: '/home/user/pic.png',
       });
     });
   });

@@ -263,8 +263,7 @@ export const useFileBrowserStore = create<FileBrowserState>()(
 
         const fileToWatch = watchedFile || viewerFilePath;
         useConnectionStore.getState().sendMessage('watch-file', {
-          sessionId,
-          filePath: fileToWatch,
+          path: fileToWatch,
         });
       },
 
