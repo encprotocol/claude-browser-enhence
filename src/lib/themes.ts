@@ -87,7 +87,7 @@ export const presetThemes: Record<string, Theme> = {
     keyword: '#f92672', string: '#e6db74', number: '#ae81ff', command: '#66d9ef',
   },
   tinaciousDesign: {
-    background: '#1D1D26', foreground: '#B3B3D4', cursor: '#ff3399', selection: '#ff339933',
+    background: '#1D1D26', foreground: '#B3B3D4', cursor: '#ff3399', selection: '#ff3399',
     black: '#2c2c3e', red: '#ff3399', green: '#00D364', yellow: '#FFCC66',
     blue: '#00BFFF', magenta: '#CC66FF', cyan: '#00CED1', white: '#ffffff',
     brightBlack: '#3d3d56', header: '#252530', tabbar: '#1D1D26', activeTab: '#2c2c3e', accent: '#ff3399',
@@ -138,7 +138,7 @@ export const presetThemes: Record<string, Theme> = {
   },
   // ===== SOFT LIGHT THEMES =====
   everforestLight: {
-    background: '#fdf6e3', foreground: '#5c6a72', cursor: '#5c6a72', selection: '#e6e2cc',
+    background: '#fdf6e3', foreground: '#5c6a72', cursor: '#5c6a72', selection: '#8da101',
     black: '#5c6a72', red: '#f85552', green: '#8da101', yellow: '#dfa000',
     blue: '#3a94c5', magenta: '#df69ba', cyan: '#35a77c', white: '#868d80',
     brightBlack: '#939f91', header: '#f4f0d9', tabbar: '#efebd4', activeTab: '#fdf6e3', accent: '#8da101',
@@ -153,7 +153,7 @@ export const presetThemes: Record<string, Theme> = {
     keyword: '#c56f30', string: '#6d9100', number: '#a37acc', command: '#328bcb',
   },
   oneLight: {
-    background: '#fafafa', foreground: '#383a42', cursor: '#526fff', selection: '#e5e5e6',
+    background: '#fafafa', foreground: '#383a42', cursor: '#526fff', selection: '#4078f2',
     black: '#383a42', red: '#e45649', green: '#50a14f', yellow: '#c18401',
     blue: '#4078f2', magenta: '#a626a4', cyan: '#0184bc', white: '#858585',
     brightBlack: '#84858a', header: '#f0f0f0', tabbar: '#e5e5e5', activeTab: '#fafafa', accent: '#4078f2',
@@ -167,31 +167,31 @@ export const presetThemes: Record<string, Theme> = {
     keyword: '#cf222e', string: '#0a3069', number: '#0550ae', command: '#0969da',
   },
   solarizedLight: {
-    background: '#fdf6e3', foreground: '#657b83', cursor: '#586e75', selection: '#eee8d5',
+    background: '#fdf6e3', foreground: '#657b83', cursor: '#586e75', selection: '#268bd2',
     black: '#073642', red: '#dc322f', green: '#798b00', yellow: '#a57d00',
     blue: '#268bd2', magenta: '#d33682', cyan: '#26928a', white: '#878379',
     brightBlack: '#7a8585', header: '#eee8d5', tabbar: '#e4ddc8', activeTab: '#fdf6e3', accent: '#268bd2',
     keyword: '#798b00', string: '#26928a', number: '#d33682', command: '#268bd2',
   },
   catppuccinLatte: {
-    background: '#eff1f5', foreground: '#4c4f69', cursor: '#dc8a78', selection: '#acb0be',
+    background: '#eff1f5', foreground: '#4c4f69', cursor: '#dc8a78', selection: '#8839ef',
     black: '#5c5f77', red: '#d20f39', green: '#3a9127', yellow: '#b27117',
     blue: '#1e66f5', magenta: '#8839ef', cyan: '#179299', white: '#7e7f81',
     brightBlack: '#7c7f8b', header: '#e6e9ef', tabbar: '#dce0e8', activeTab: '#eff1f5', accent: '#8839ef',
     keyword: '#8839ef', string: '#3a9127', number: '#d95509', command: '#1e66f5',
   },
   rosePineDawn: {
-    background: '#faf4ed', foreground: '#575279', cursor: '#d7827e', selection: '#dfdad9',
+    background: '#faf4ed', foreground: '#575279', cursor: '#d7827e', selection: '#d7827e',
     black: '#575279', red: '#b4637a', green: '#286983', yellow: '#b07627',
     blue: '#56949f', magenta: '#907aa9', cyan: '#56949f', white: '#85827e',
     brightBlack: '#858090', header: '#fffaf3', tabbar: '#f2e9e1', activeTab: '#faf4ed', accent: '#d7827e',
     keyword: '#907aa9', string: '#b07627', number: '#b66e6b', command: '#56949f',
   },
   tinaciousDesignLight: {
-    background: '#f8f8ff', foreground: '#44425e', cursor: '#ff3399', selection: '#dbdaff',
+    background: '#ededf5', foreground: '#44425e', cursor: '#ff3399', selection: '#cc66ff',
     black: '#2c2c3e', red: '#ff3399', green: '#00b253', yellow: '#FFAA00',
     blue: '#01a9e1', magenta: '#CC66FF', cyan: '#00CED1', white: '#ffffff',
-    brightBlack: '#3d3d56', header: '#f5f5ff', tabbar: '#f0f0ff', activeTab: '#f8f8ff', accent: '#ff3399',
+    brightBlack: '#3d3d56', header: '#e5e5f0', tabbar: '#dddde8', activeTab: '#ededf5', accent: '#ff3399',
     keyword: '#FF3399', string: '#FFAA00', number: '#CC66FF', command: '#01a9e1',
   },
 };

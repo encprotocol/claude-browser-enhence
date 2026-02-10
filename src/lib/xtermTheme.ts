@@ -1,11 +1,14 @@
 import type { Theme } from '@/types';
+import { wcagContrast, isLightColor } from '@/lib/colorUtils';
 
 export interface XtermThemeOptions {
   background: string;
   foreground: string;
   cursor: string;
   cursorAccent: string;
-  selection: string;
+  selectionBackground: string;
+  selectionForeground: string;
+  selectionInactiveBackground: string;
   black: string;
   red: string;
   green: string;
@@ -24,13 +27,31 @@ export interface XtermThemeOptions {
   brightWhite: string;
 }
 
+/** Strip any embedded alpha from a hex color (e.g. #ff339933 → #ff3399) */
+export function stripAlpha(hex: string): string {
+  return hex.length > 7 ? hex.slice(0, 7) : hex;
+}
+
+/** Compute selection opacity suffix based on contrast with background */
+function selectionOpacity(selection: string, background: string): string {
+  const contrast = wcagContrast(selection, background);
+  if (contrast >= 3.0) return '4d'; // 30%
+  if (contrast >= 1.5) return '80'; // 50%
+  return 'b3'; // 70%
+}
+
 export function buildXtermTheme(theme: Theme): XtermThemeOptions {
+  const sel = stripAlpha(theme.selection);
+  const alpha = selectionOpacity(sel, theme.background);
+  const light = isLightColor(theme.background);
   return {
     background: theme.background,
     foreground: theme.foreground,
     cursor: theme.cursor,
     cursorAccent: theme.background,
-    selection: theme.selection + '4d',
+    selectionBackground: sel + alpha,
+    selectionForeground: light ? '#ffffff' : '#000000',
+    selectionInactiveBackground: sel + alpha,
     black: theme.black,
     red: theme.red,
     green: theme.green,

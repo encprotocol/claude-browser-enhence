@@ -36,6 +36,8 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
 
     ws.onopen = () => {
       set({ connected: true });
+      // Pre-fetch Claude availability status
+      get().sendMessage('check-claude-running');
     };
 
     ws.onmessage = (event) => {

@@ -49,6 +49,7 @@ beforeEach(() => {
     textValue: '',
     showingResult: false,
     diffHtml: '',
+    claudeRunning: null,
   });
 
   useSessionStore.setState({
@@ -107,6 +108,18 @@ describe('Correction panel lifecycle', () => {
     const state = useCorrectionStore.getState();
     expect(state.enabled).toBe(true);
     expect(state.panelVisible).toBe(true);
+    expect(state.claudeRunning).toBe(true);
+  });
+
+  it('sets claudeRunning false when claude-running-status is false', () => {
+    routeMessage({ type: 'claude-running-status', running: false });
+    const state = useCorrectionStore.getState();
+    expect(state.enabled).toBe(false);
+    expect(state.claudeRunning).toBe(false);
+  });
+
+  it('claudeRunning defaults to null', () => {
+    expect(useCorrectionStore.getState().claudeRunning).toBeNull();
   });
 
   // --- Input state ---

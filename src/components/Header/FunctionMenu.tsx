@@ -17,6 +17,7 @@ interface MenuItem {
   shortcut?: string;
   action: () => void;
   active?: boolean;
+  statusColor?: string;
   dividerAfter?: boolean;
 }
 
@@ -29,6 +30,7 @@ export default function FunctionMenu({ onOpenSettings }: FunctionMenuProps) {
   const setCorrectionEnabled = useCorrectionStore((s) => s.setEnabled);
   const setCorrectionPanelVisible = useCorrectionStore((s) => s.setPanelVisible);
   const correctionPanelVisible = useCorrectionStore((s) => s.panelVisible);
+  const claudeRunning = useCorrectionStore((s) => s.claudeRunning);
   const toggleTodos = useTodoStore((s) => s.toggle);
   const toggleNotes = useNotesStore((s) => s.toggle);
   const toggleRecordings = useRecordingStore((s) => s.toggle);
@@ -64,7 +66,7 @@ export default function FunctionMenu({ onOpenSettings }: FunctionMenuProps) {
   };
 
   const items: MenuItem[] = [
-    { icon: 'Aa', label: 'English Correction', shortcut: '⌘X', action: handleCorrectionToggle, active: correctionEnabled },
+    { icon: 'Aa', label: 'English Correction', shortcut: '⌘X', action: handleCorrectionToggle, active: correctionEnabled, statusColor: claudeRunning === true ? '#22c55e' : claudeRunning === false ? '#ef4444' : undefined },
     { icon: '☑', label: 'Todos', shortcut: '⌘J', action: toggleTodos },
     { icon: '📝', label: 'Notes', shortcut: '⌘K', action: toggleNotes },
     { icon: '⏺', label: 'Recordings', shortcut: '⌘H', action: toggleRecordings, dividerAfter: true },
@@ -120,6 +122,7 @@ export default function FunctionMenu({ onOpenSettings }: FunctionMenuProps) {
                 <span className="function-menu-icon">{item.icon}</span>
                 <span className="function-menu-label">{item.label}</span>
                 {item.active && <span className="active-dot" />}
+                {!item.active && item.statusColor && <span className="status-dot" style={{ background: item.statusColor }} />}
                 {item.shortcut && <span className="function-menu-shortcut">{item.shortcut}</span>}
               </button>
               {item.dividerAfter && i < items.length - 1 && <div className="function-menu-divider" />}

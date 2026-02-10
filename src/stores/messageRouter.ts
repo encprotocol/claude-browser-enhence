@@ -113,6 +113,7 @@ export function routeMessage(msg: ServerMessage) {
     }
 
     case 'claude-running-status':
+      correctionStore.setClaudeRunning(msg.running);
       if (msg.running) {
         correctionStore.setEnabled(true);
         correctionStore.setPanelVisible(true);

@@ -11,12 +11,14 @@ interface CorrectionStoreState {
   showingResult: boolean;
   diffHtml: string;
   mode: CorrectionMode;
+  claudeRunning: boolean | null;
 
   /** Per-session saved states */
   sessionStates: Map<string, CorrectionState>;
 
   setEnabled: (enabled: boolean) => void;
   setPanelVisible: (visible: boolean) => void;
+  setClaudeRunning: (running: boolean | null) => void;
   setInputBuffer: (buffer: string) => void;
   setPendingCorrection: (correction: { original: string; corrected: string } | null) => void;
   setWaitingForCorrection: (waiting: boolean) => void;
@@ -41,10 +43,12 @@ export const useCorrectionStore = create<CorrectionStoreState>((set, get) => ({
   showingResult: false,
   diffHtml: '',
   mode: (localStorage.getItem('correction-mode') as CorrectionMode) || 'grammar',
+  claudeRunning: null,
   sessionStates: new Map(),
 
   setEnabled: (enabled) => set({ enabled }),
   setPanelVisible: (panelVisible) => set({ panelVisible }),
+  setClaudeRunning: (claudeRunning) => set({ claudeRunning }),
   setInputBuffer: (inputBuffer) => set({ inputBuffer }),
   setPendingCorrection: (pendingCorrection) => set({ pendingCorrection }),
   setWaitingForCorrection: (waitingForCorrection) => set({ waitingForCorrection }),
