@@ -13,6 +13,7 @@
   --theme-muted: #94a3b8;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
+#root, #app { display: contents; }
 body {
   background: #1a1a2e;
   height: 100vh;
@@ -119,7 +120,7 @@ header h1 {
 }
 
 /* Terminal container */
-#terminal-container {
+.terminal-container {
   flex: 1; padding: 10px; overflow: hidden; position: relative;
 }
 #terminal { height: 100%; }
@@ -558,7 +559,7 @@ header h1 {
 .image-modal-info { color: #94a3b8; font-size: 12px; margin-top: 8px; text-align: center; }
 
 /* Main area */
-#main-area { display: flex; flex: 1; overflow: hidden; position: relative; }
+.main-content { display: flex; flex: 1; overflow: hidden; position: relative; }
 
 /* File sidebar (overlay) */
 .file-sidebar {
