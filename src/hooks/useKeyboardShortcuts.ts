@@ -28,8 +28,9 @@ export function useKeyboardShortcuts() {
         } else if (corrState.enabled) {
           corrState.setEnabled(false);
           corrState.setPanelVisible(false);
-        } else {
-          useConnectionStore.getState().sendMessage('check-claude-running');
+        } else if (corrState.llmConfigured) {
+          corrState.setEnabled(true);
+          corrState.setPanelVisible(true);
         }
         return;
       }

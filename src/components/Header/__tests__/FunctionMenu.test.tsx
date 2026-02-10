@@ -2,17 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 
 // Mock stores
-vi.mock('@/stores/connectionStore', () => ({
-  useConnectionStore: vi.fn((sel: any) => {
-    const state = { connected: true, sendMessage: vi.fn() };
-    return sel ? sel(state) : state;
-  }),
-}));
 vi.mock('@/stores/correctionStore', () => ({
   useCorrectionStore: vi.fn((sel: any) => {
     const state = {
       enabled: false,
       panelVisible: false,
+      llmConfigured: null,
       setEnabled: vi.fn(),
       setPanelVisible: vi.fn(),
     };
@@ -137,6 +132,7 @@ describe('FunctionMenu', () => {
       const state = {
         enabled: true,
         panelVisible: true,
+        llmConfigured: true,
         setEnabled: vi.fn(),
         setPanelVisible: vi.fn(),
       };

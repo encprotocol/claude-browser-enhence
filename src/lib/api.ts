@@ -67,6 +67,28 @@ export async function generateRecordingSummary(id: string, transcript: string): 
   return res.json();
 }
 
+export interface LLMConfigResponse {
+  activeProvider: string;
+  providers: Record<string, { configured: boolean }>;
+}
+
+export async function fetchLLMConfig(): Promise<LLMConfigResponse> {
+  const res = await fetch('/api/llm-config');
+  return res.json();
+}
+
+export async function saveLLMConfig(data: {
+  activeProvider?: string;
+  providers?: Record<string, { apiKey: string }>;
+}): Promise<LLMConfigResponse> {
+  const res = await fetch('/api/llm-config', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return res.json();
+}
+
 export async function uploadFile(name: string, base64Data: string): Promise<string> {
   const res = await fetch('/api/upload', {
     method: 'POST',

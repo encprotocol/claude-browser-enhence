@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useThemeStore } from '@/stores/themeStore';
 import { useCorrectionStore } from '@/stores/correctionStore';
 import { presetThemes, defaultTheme } from '@/lib/themes';
+import { fetchLLMConfig, saveLLMConfig } from '@/lib/api';
 import type { Theme, CorrectionMode } from '@/types';
 
 interface SettingsModalProps {
@@ -96,6 +97,104 @@ function isActiveTheme(current: Theme, presetKey: string): boolean {
   return preset.background === current.background && preset.foreground === current.foreground && preset.cursor === current.cursor;
 }
 
+const providerNames: Record<string, string> = {
+  anthropic: 'Anthropic',
+  gemini: 'Gemini',
+  openai: 'OpenAI',
+};
+
+const providerOrder = ['anthropic', 'gemini', 'openai'] as const;
+
+function LLMTab() {
+  const [config, setConfig] = useState<{
+    activeProvider: string;
+    providers: Record<string, { configured: boolean }>;
+  } | null>(null);
+  const [keys, setKeys] = useState<Record<string, string>>({
+    anthropic: '',
+    gemini: '',
+    openai: '',
+  });
+  const [saving, setSaving] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchLLMConfig().then(setConfig).catch(() => {});
+  }, []);
+
+  const handleSaveKey = async (provider: string) => {
+    const key = keys[provider];
+    if (!key.trim()) return;
+    setSaving(provider);
+    try {
+      const result = await saveLLMConfig({ providers: { [provider]: { apiKey: key } } });
+      setConfig(result);
+      setKeys((prev) => ({ ...prev, [provider]: '' }));
+    } catch {}
+    setSaving(null);
+  };
+
+  const handleSetActive = async (provider: string) => {
+    if (!config?.providers[provider]?.configured) return;
+    try {
+      const result = await saveLLMConfig({ activeProvider: provider });
+      setConfig(result);
+    } catch {}
+  };
+
+  if (!config) {
+    return <div className="settings-section"><p style={{ color: 'var(--theme-muted)' }}>Loading...</p></div>;
+  }
+
+  return (
+    <>
+      <div className="settings-section">
+        <h3>LLM Provider</h3>
+        <p style={{ color: 'var(--theme-muted)', fontSize: '13px', marginBottom: '12px' }}>
+          Configure an API key for at least one provider, then select it as active.
+        </p>
+        <div className="llm-providers">
+          {providerOrder.map((provider) => {
+            const configured = config.providers[provider]?.configured ?? false;
+            const isActive = config.activeProvider === provider;
+            return (
+              <div
+                key={provider}
+                className={`llm-provider-row${isActive ? ' active' : ''}`}
+                onClick={() => handleSetActive(provider)}
+              >
+                <div className="llm-provider-header">
+                  <span className={`llm-status-dot${configured ? ' configured' : ''}`} />
+                  <span className="llm-provider-name">{providerNames[provider]}</span>
+                  {isActive && <span className="llm-active-badge">Active</span>}
+                </div>
+                <div className="llm-provider-key" onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="password"
+                    className="llm-key-input"
+                    placeholder={configured ? 'Key saved (enter new to replace)' : 'Enter API key...'}
+                    value={keys[provider]}
+                    onChange={(e) => setKeys((prev) => ({ ...prev, [provider]: e.target.value }))}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveKey(provider);
+                    }}
+                  />
+                  <button
+                    className="llm-save-btn"
+                    disabled={!keys[provider].trim() || saving === provider}
+                    onClick={() => handleSaveKey(provider)}
+                  >
+                    {saving === provider ? '...' : 'Save'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default function SettingsModal({ open, onClose }: SettingsModalProps) {
   const theme = useThemeStore((s) => s.theme);
   const fontSettings = useThemeStore((s) => s.fontSettings);
@@ -103,7 +202,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
   const setFontSettings = useThemeStore((s) => s.setFontSettings);
   const correctionMode = useCorrectionStore((s) => s.mode);
   const setCorrectionMode = useCorrectionStore((s) => s.setMode);
-  const [activeTab, setActiveTab] = useState<'theme' | 'grammar'>('theme');
+  const [activeTab, setActiveTab] = useState<'theme' | 'grammar' | 'llm'>('theme');
 
   if (!open) return null;
 
@@ -173,6 +272,10 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
             className={`settings-tab${activeTab === 'grammar' ? ' active' : ''}`}
             onClick={() => setActiveTab('grammar')}
           >Grammar</button>
+          <button
+            className={`settings-tab${activeTab === 'llm' ? ' active' : ''}`}
+            onClick={() => setActiveTab('llm')}
+          >LLM</button>
         </div>
 
         {activeTab === 'theme' && (
@@ -249,6 +352,8 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
             </div>
           </>
         )}
+
+        {activeTab === 'llm' && <LLMTab />}
 
       </div>
     </div>

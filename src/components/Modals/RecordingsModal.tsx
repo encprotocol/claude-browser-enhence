@@ -30,7 +30,7 @@ function SummaryTab({ recording }: { recording: Recording }) {
   const summary = useRecordingStore((s) => s.summary);
   const summaryLoading = useRecordingStore((s) => s.summaryLoading);
   const summaryError = useRecordingStore((s) => s.summaryError);
-  const claudeRunning = useCorrectionStore((s) => s.claudeRunning);
+  const llmConfigured = useCorrectionStore((s) => s.llmConfigured);
 
   const isStale = summary && recording.events.length > summary.eventCount;
 
@@ -38,7 +38,7 @@ function SummaryTab({ recording }: { recording: Recording }) {
     useRecordingStore.getState().generateSummary(recording.id);
   };
 
-  const claudeUnavailable = claudeRunning === false;
+  const apiUnavailable = llmConfigured === false;
 
   // Backward compat: old summaries have `summary` but no `abstract`/`detail`
   const abstractText = summary?.abstract || '';
@@ -72,13 +72,13 @@ function SummaryTab({ recording }: { recording: Recording }) {
         <button
           className="recording-summary-generate"
           onClick={handleGenerate}
-          disabled={claudeUnavailable}
+          disabled={apiUnavailable}
         >
           Generate Summary
         </button>
-        {claudeUnavailable && (
+        {apiUnavailable && (
           <div className="recording-summary-disabled">
-            Claude is not running in any session.
+            No LLM configured. Set an API key in Settings.
           </div>
         )}
       </div>
@@ -103,7 +103,7 @@ function SummaryTab({ recording }: { recording: Recording }) {
         <button
           className="recording-summary-generate"
           onClick={handleGenerate}
-          disabled={claudeUnavailable}
+          disabled={apiUnavailable}
         >
           Regenerate
         </button>
@@ -196,31 +196,31 @@ export default function RecordingsModal() {
           <div className="recordings-empty">Loading...</div>
         ) : (
           <div className="recordings-list">
-            {loading ? (
-              <div className="recordings-empty">Loading...</div>
-            ) : recordings.length === 0 ? (
-              <div className="recordings-empty">No recordings yet. Claude sessions are recorded automatically.</div>
-            ) : (
-              recordings.map((rec) => (
-                <div
-                  key={rec.id}
-                  className={`recordings-row${rec.id === lastViewedId ? ' last-viewed' : ''}`}
-                  onClick={() => useRecordingStore.getState().viewRecording(rec.id)}
-                >
-                  <span className="recordings-row-path">{rec.cwd}</span>
-                  {rec.firstInput && <span className="recordings-row-input">{rec.firstInput}</span>}
-                  <span className="recordings-row-date">{formatDate(rec.startedAt)}</span>
-                  <button
-                    className="recordings-row-delete"
-                    title="Delete recording"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      useRecordingStore.getState().deleteRecording(rec.id);
-                    }}
-                  >×</button>
-                </div>
-              ))
+            {loading && (
+              <div key="loading" className="recordings-empty">Loading...</div>
             )}
+            {!loading && recordings.length === 0 && (
+              <div key="empty" className="recordings-empty">No recordings yet. Claude sessions are recorded automatically.</div>
+            )}
+            {!loading && recordings.map((rec) => (
+              <div
+                key={rec.id}
+                className={`recordings-row${rec.id === lastViewedId ? ' last-viewed' : ''}`}
+                onClick={() => useRecordingStore.getState().viewRecording(rec.id)}
+              >
+                <span className="recordings-row-path">{rec.cwd}</span>
+                {rec.firstInput && <span className="recordings-row-input">{rec.firstInput}</span>}
+                <span className="recordings-row-date">{formatDate(rec.startedAt)}</span>
+                <button
+                  className="recordings-row-delete"
+                  title="Delete recording"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    useRecordingStore.getState().deleteRecording(rec.id);
+                  }}
+                >×</button>
+              </div>
+            ))}
           </div>
         )}
       </div>

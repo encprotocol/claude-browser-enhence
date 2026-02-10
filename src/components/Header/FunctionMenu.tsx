@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from 'react';
-import { useConnectionStore } from '@/stores/connectionStore';
 import { useCorrectionStore } from '@/stores/correctionStore';
 import { useTodoStore } from '@/stores/todoStore';
 import { useNotesStore } from '@/stores/notesStore';
@@ -25,12 +24,11 @@ export default function FunctionMenu({ onOpenSettings }: FunctionMenuProps) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const sendMessage = useConnectionStore((s) => s.sendMessage);
   const correctionEnabled = useCorrectionStore((s) => s.enabled);
   const setCorrectionEnabled = useCorrectionStore((s) => s.setEnabled);
   const setCorrectionPanelVisible = useCorrectionStore((s) => s.setPanelVisible);
   const correctionPanelVisible = useCorrectionStore((s) => s.panelVisible);
-  const claudeRunning = useCorrectionStore((s) => s.claudeRunning);
+  const llmConfigured = useCorrectionStore((s) => s.llmConfigured);
   const toggleTodos = useTodoStore((s) => s.toggle);
   const toggleNotes = useNotesStore((s) => s.toggle);
   const toggleRecordings = useRecordingStore((s) => s.toggle);
@@ -47,8 +45,9 @@ export default function FunctionMenu({ onOpenSettings }: FunctionMenuProps) {
     if (correctionEnabled) {
       setCorrectionEnabled(false);
       setCorrectionPanelVisible(false);
-    } else {
-      sendMessage('check-claude-running');
+    } else if (llmConfigured) {
+      setCorrectionEnabled(true);
+      setCorrectionPanelVisible(true);
     }
   };
 
@@ -66,7 +65,7 @@ export default function FunctionMenu({ onOpenSettings }: FunctionMenuProps) {
   };
 
   const items: MenuItem[] = [
-    { icon: 'Aa', label: 'English Correction', shortcut: '⌘X', action: handleCorrectionToggle, active: correctionEnabled, statusColor: claudeRunning === true ? '#22c55e' : claudeRunning === false ? '#ef4444' : undefined },
+    { icon: 'Aa', label: 'English Correction', shortcut: '⌘X', action: handleCorrectionToggle, active: correctionEnabled, statusColor: llmConfigured === true ? '#22c55e' : llmConfigured === false ? '#ef4444' : undefined },
     { icon: '☑', label: 'Todos', shortcut: '⌘J', action: toggleTodos },
     { icon: '📝', label: 'Notes', shortcut: '⌘K', action: toggleNotes },
     { icon: '⏺', label: 'Recordings', shortcut: '⌘H', action: toggleRecordings, dividerAfter: true },

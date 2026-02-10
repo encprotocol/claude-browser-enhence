@@ -50,6 +50,8 @@ beforeEach(() => {
     showingResult: false,
     diffHtml: '',
     claudeRunning: null,
+    llmConfigured: null,
+    llmProvider: null,
   });
 
   useSessionStore.setState({
@@ -103,18 +105,18 @@ function componentHideCorrectionPanel() {
 describe('Correction panel lifecycle', () => {
   // --- Enable / Disable ---
 
-  it('enables correction when claude-running-status is true', () => {
+  it('sets claudeRunning true without auto-enabling correction', () => {
     routeMessage({ type: 'claude-running-status', running: true });
     const state = useCorrectionStore.getState();
-    expect(state.enabled).toBe(true);
-    expect(state.panelVisible).toBe(true);
     expect(state.claudeRunning).toBe(true);
+    // No longer auto-enables — LLM config controls that now
+    expect(state.enabled).toBe(false);
+    expect(state.panelVisible).toBe(false);
   });
 
   it('sets claudeRunning false when claude-running-status is false', () => {
     routeMessage({ type: 'claude-running-status', running: false });
     const state = useCorrectionStore.getState();
-    expect(state.enabled).toBe(false);
     expect(state.claudeRunning).toBe(false);
   });
 

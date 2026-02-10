@@ -114,10 +114,11 @@ export function routeMessage(msg: ServerMessage) {
 
     case 'claude-running-status':
       correctionStore.setClaudeRunning(msg.running);
-      if (msg.running) {
-        correctionStore.setEnabled(true);
-        correctionStore.setPanelVisible(true);
-      }
+      break;
+
+    case 'llm-config-status':
+      correctionStore.setLLMConfigured(msg.configured);
+      correctionStore.setLLMProvider(msg.activeProvider);
       break;
 
     case 'cwd-result':

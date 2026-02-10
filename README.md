@@ -34,25 +34,26 @@ A browser-based terminal emulator with automatic syntax highlighting, file manag
 - **English correction** — Toggle correction mode (`Cmd+X`) to type in a dedicated panel, review word-level diffs, then accept or edit before sending to the terminal. Two modes configurable in Settings → Grammar:
   - **Grammar**: Fix spelling and grammar errors only
   - **Polish**: Improve expression while preserving meaning
-  - Uses Claude AI (Haiku model). **Requires [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed and authenticated on the server.**
+  - **Multi-provider LLM support**: Anthropic (Claude Haiku), Google Gemini, or OpenAI (GPT-4o mini). Configure API keys and select active provider in Settings → LLM.
 - **Music player** — Built-in background music player with dedicated side panel:
   - Supports YouTube URLs and direct audio file URLs (mp3, ogg, wav, etc.)
   - Transport controls: play/pause, previous, next with progress bar and seek
   - Playback modes: sequential or random order, repeat off/all/one
   - Drag-and-drop track reordering
   - Add tracks via URL input, click to play, remove individual tracks
-- **Tabbed settings panel** — Settings organized into Theme and Grammar tabs
+- **Tabbed settings panel** — Settings organized into Theme, Grammar, and LLM tabs
 - **Theme support** — 27 built-in themes plus full color customization via settings panel:
   - **Dark**: Synesthesia, Dracula, Tokyo Night, Catppuccin, Rosé Pine, Synthwave '84, Cyberpunk, Nord, Gruvbox, Ayu Dark, One Dark, Monokai, Tinacious Design
   - **Soft**: Catppuccin Frappé, Catppuccin Macchiato, Everforest Dark, Palenight, Kanagawa, Rosé Pine Moon, Everforest Light
   - **Light**: GitHub, One Light, Ayu Light, Solarized Light, Catppuccin Latte, Rosé Pine Dawn, Tinacious Design Light
 - **Clickable links** — URLs in terminal output open in a new tab
 - **Image paste & preview** — Paste images from clipboard into the terminal; displayed as `[Image #N]` markers with hover preview and full-size viewer
-- **Terminal recording** — Record and replay terminal sessions:
-  - Start/stop recording via tab context or keyboard shortcut
-  - Recordings capture all terminal output with timestamps
+- **Terminal recording** — Automatically record Claude Code sessions:
+  - Auto-start/stop when Claude process is detected
+  - Recordings with no user input are automatically discarded
   - Full-screen xterm.js playback that fills the modal with scrollable content
-  - Browse all recordings in a dedicated modal with metadata (date, duration, size)
+  - AI-generated summaries (abstract + detail) via active LLM provider
+  - Browse all recordings in a dedicated modal with metadata (date, duration, first input)
   - Delete individual recordings
 - **Terminal resize** — Automatic terminal resizing to fit the browser window
 - **Font settings** — Adjustable font size and line height via settings panel
@@ -62,7 +63,7 @@ A browser-based terminal emulator with automatic syntax highlighting, file manag
 - **Frontend**: React, TypeScript, Vite, Zustand, xterm.js
 - **Backend**: Node.js, Express, WebSocket (ws), node-pty
 - **Testing**: Vitest
-- **AI**: Claude Code CLI (for English correction)
+- **AI**: Multi-provider LLM (Anthropic / Gemini / OpenAI) for correction and summaries
 
 ## Getting Started
 
@@ -70,7 +71,10 @@ A browser-based terminal emulator with automatic syntax highlighting, file manag
 
 - Node.js (v16+)
 - npm
-- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) (optional, required for English correction feature)
+- An API key for at least one LLM provider (optional, for English correction and recording summaries):
+  - [Anthropic](https://console.anthropic.com/) (Claude Haiku 4.5)
+  - [Google Gemini](https://aistudio.google.com/apikey) (Gemini 2.0 Flash)
+  - [OpenAI](https://platform.openai.com/api-keys) (GPT-4o mini)
 
 ### Install & Run
 
@@ -103,7 +107,7 @@ npm test
 │   └── styles/index.css   # All styles
 ├── public/
 │   └── index.html         # Legacy monolithic SPA (still present)
-├── data/                  # Server-side persistent storage (todos, notes JSON)
+├── data/                  # Server-side persistent storage (todos, notes, LLM config, recordings)
 └── package.json
 ```
 
@@ -121,6 +125,10 @@ npm test
 | `GET` | `/api/recordings` | List all recording metadata |
 | `GET` | `/api/recordings/:id` | Get full recording with events |
 | `DELETE` | `/api/recordings/:id` | Delete a recording |
+| `POST` | `/api/recordings/:id/summary` | Generate AI summary for a recording |
+| `GET` | `/api/recordings/:id/summary` | Get saved recording summary |
+| `GET` | `/api/llm-config` | Get LLM provider config (keys never exposed) |
+| `PUT` | `/api/llm-config` | Update LLM provider keys / active provider |
 
 ## Keyboard Shortcuts
 

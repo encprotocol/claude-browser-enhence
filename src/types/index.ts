@@ -118,6 +118,7 @@ export type ServerMessage =
   | { type: 'correction-result'; sessionId: string; original: string; corrected: string }
   | { type: 'correction-error'; sessionId: string; original: string; error: string }
   | { type: 'claude-running-status'; running: boolean }
+  | { type: 'llm-config-status'; configured: boolean; activeProvider: string }
   | { type: 'cwd-result'; cwd: string; home: string }
   | { type: 'directory-listing'; path: string; entries?: FileEntry[]; error?: string }
   | { type: 'file-content'; path: string; content?: string; name?: string; error?: string }

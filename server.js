@@ -1,6 +1,6 @@
 const express = require('express');
 const { WebSocketServer } = require('ws');
-const { spawn, execSync } = require('child_process');
+const { execSync } = require('child_process');
 const pty = require('node-pty');
 const path = require('path');
 const fs = require('fs');
@@ -28,6 +28,129 @@ function readJSON(file, fallback) {
 function writeJSON(file, data) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
   fs.writeFileSync(path.join(DATA_DIR, file), JSON.stringify(data, null, 2));
+}
+
+// --- LLM Provider Support ---
+const LLM_CONFIG_FILE = 'config.json';
+const LLM_DEFAULT_CONFIG = { activeProvider: '', providers: {} };
+
+function getLLMConfig() {
+  return readJSON(LLM_CONFIG_FILE, LLM_DEFAULT_CONFIG);
+}
+
+function saveLLMConfigFile(config) {
+  writeJSON(LLM_CONFIG_FILE, config);
+}
+
+async function callAnthropic(apiKey, prompt, opts = {}) {
+  const { maxTokens = 1024, timeoutMs = 30000 } = opts;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: maxTokens,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Anthropic API ${res.status}: ${err}`);
+    }
+    const data = await res.json();
+    return data.content[0].text;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function callGemini(apiKey, prompt, opts = {}) {
+  const { maxTokens = 1024, timeoutMs = 30000 } = opts;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { maxOutputTokens: maxTokens },
+      }),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Gemini API ${res.status}: ${err}`);
+    }
+    const data = await res.json();
+    return data.candidates[0].content.parts[0].text;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function callOpenAI(apiKey, prompt, opts = {}) {
+  const { maxTokens = 1024, timeoutMs = 30000 } = opts;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        max_tokens: maxTokens,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`OpenAI API ${res.status}: ${err}`);
+    }
+    const data = await res.json();
+    return data.choices[0].message.content;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function callLLM(prompt, opts = {}) {
+  const config = getLLMConfig();
+  const provider = config.activeProvider || '';
+  const providers = config.providers || {};
+  const providerConfig = provider ? providers[provider] : undefined;
+  if (!provider || !providerConfig || !providerConfig.apiKey) {
+    throw new Error('No LLM provider configured');
+  }
+  const apiKey = providerConfig.apiKey;
+  switch (provider) {
+    case 'anthropic': return callAnthropic(apiKey, prompt, opts);
+    case 'gemini': return callGemini(apiKey, prompt, opts);
+    case 'openai': return callOpenAI(apiKey, prompt, opts);
+    default: throw new Error(`Unknown LLM provider: ${provider}`);
+  }
+}
+
+function getLLMConfigStatus() {
+  const config = getLLMConfig();
+  const provider = config.activeProvider || '';
+  const providers = config.providers || {};
+  const providerConfig = provider ? providers[provider] : undefined;
+  const configured = !!(provider && providerConfig && providerConfig.apiKey);
+  return { configured, activeProvider: provider };
 }
 
 app.get('/api/todos', (req, res) => res.json(readJSON('todos.json', [])));
@@ -142,73 +265,82 @@ function startRecording(session, clientData) {
   console.log(`Recording started: ${id} for session ${session.id}`);
 }
 
+function extractFirstInput(events) {
+  if (!events || events.length === 0) return '';
+  // Grab possible leading character from output echo
+  let prefix = '';
+  for (const ev of events) {
+    if (ev.type === 'i') break;
+    if (ev.type === 'o' && !prefix) {
+      const plain = ev.data
+        .replace(/\x1b\[[^a-zA-Z]*[a-zA-Z]/g, '')
+        .replace(/\x1b\[\?[0-9]*[a-z]/g, '')
+        .replace(/[\x00-\x1f\x7f]/g, '')
+        .trim();
+      if (plain.length > 0) prefix = plain[0];
+    }
+  }
+  let buf = '';
+  for (const ev of events) {
+    if (ev.type === 'i') {
+      buf += ev.data;
+      const nlIdx = buf.search(/[\r\n]/);
+      if (nlIdx !== -1) {
+        buf = buf.slice(0, nlIdx);
+        break;
+      }
+    }
+  }
+  buf = buf
+    .replace(/\x1b\[[?>=!]?[0-9;]*[A-Za-z~]/g, '')
+    .replace(/\x1bO./g, '')
+    .replace(/\x1b\][^\x07]*(?:\x07|\x1b\\)/g, '')
+    .replace(/\x1b./g, '');
+  const chars = [];
+  for (const ch of buf) {
+    if (ch === '\x7f' || ch === '\x08') {
+      chars.pop();
+    } else if (ch.charCodeAt(0) >= 0x20) {
+      chars.push(ch);
+    }
+  }
+  buf = chars.join('').trim();
+  return (prefix + buf).trim();
+}
+
 function stopRecording(session, clientData) {
   const recording = session.recording;
   if (!recording) return;
   recording.endedAt = new Date().toISOString();
-  flushRecording(recording);
   const recordingId = recording.id;
   session.recording = null;
   session.claudeRunning = false;
+
+  // Discard recordings with no real user input
+  const firstInput = extractFirstInput(recording.events);
+  if (!firstInput) {
+    try { fs.unlinkSync(path.join(RECORDINGS_DIR, recordingId + '.json')); } catch {}
+    console.log(`Recording discarded (no input): ${recordingId}`);
+  } else {
+    flushRecording(recording);
+    console.log(`Recording stopped: ${recordingId} for session ${session.id}`);
+  }
+
   if (clientData.sendMessage) {
     clientData.sendMessage('recording-stopped', { sessionId: session.id, recordingId });
   }
-  console.log(`Recording stopped: ${recordingId} for session ${session.id}`);
 }
 
 app.get('/api/recordings', (req, res) => {
   try {
-    const files = fs.readdirSync(RECORDINGS_DIR).filter(f => f.endsWith('.json'));
+    const files = fs.readdirSync(RECORDINGS_DIR).filter(f => f.endsWith('.json') && !f.endsWith('.summary.json'));
     const metas = [];
     for (const file of files) {
       try {
         const data = JSON.parse(fs.readFileSync(path.join(RECORDINGS_DIR, file), 'utf8'));
-        // Extract first input line from events
-        let firstInput = '';
-        if (data.events) {
-          // The first typed character may land in an output event (echoed)
-          // before the recording captures it as input. Grab it.
-          let prefix = '';
-          for (const ev of data.events) {
-            if (ev.type === 'i') break;
-            if (ev.type === 'o' && !prefix) {
-              const plain = ev.data
-                .replace(/\x1b\[[^a-zA-Z]*[a-zA-Z]/g, '')
-                .replace(/\x1b\[\?[0-9]*[a-z]/g, '')
-                .replace(/[\x00-\x1f\x7f]/g, '')
-                .trim();
-              if (plain.length > 0) prefix = plain[0];
-            }
-          }
-          let buf = '';
-          for (const ev of data.events) {
-            if (ev.type === 'i') {
-              buf += ev.data;
-              const nlIdx = buf.search(/[\r\n]/);
-              if (nlIdx !== -1) {
-                buf = buf.slice(0, nlIdx);
-                break;
-              }
-            }
-          }
-          // Strip ANSI escape sequences before removing control chars
-          buf = buf
-            .replace(/\x1b\[[?>=!]?[0-9;]*[A-Za-z~]/g, '')  // CSI sequences
-            .replace(/\x1bO./g, '')                            // SS3 sequences
-            .replace(/\x1b\][^\x07]*(?:\x07|\x1b\\)/g, '')   // OSC sequences
-            .replace(/\x1b./g, '');                            // Other ESC sequences
-          // Simulate backspace editing
-          const chars = [];
-          for (const ch of buf) {
-            if (ch === '\x7f' || ch === '\x08') {
-              chars.pop();
-            } else if (ch.charCodeAt(0) >= 0x20) {
-              chars.push(ch);
-            }
-          }
-          buf = chars.join('').trim();
-          firstInput = (prefix + buf).trim();
-        }
+        const firstInput = extractFirstInput(data.events);
+        // Skip recordings with no real user input
+        if (!firstInput) continue;
         // Check for sidecar summary file
         let hasSummary = false;
         let summaryEventCount;
@@ -271,7 +403,7 @@ app.get('/api/recordings/:id/summary', (req, res) => {
   }
 });
 
-app.post('/api/recordings/:id/summary', (req, res) => {
+app.post('/api/recordings/:id/summary', async (req, res) => {
   const { transcript } = req.body;
   if (!transcript) return res.status(400).json({ error: 'Missing transcript' });
 
@@ -304,54 +436,83 @@ Write in past tense. Be specific about file names, functions, and technical deta
 Transcript:
 ${transcript}`;
 
-  const claude = spawn('claude', ['-p', prompt, '--model', 'haiku'], {
-    stdio: ['ignore', 'pipe', 'pipe']
-  });
-
-  let stdout = '';
-  let stderr = '';
-
-  claude.stdout.on('data', (data) => { stdout += data.toString(); });
-  claude.stderr.on('data', (data) => { stderr += data.toString(); });
-
-  const timeout = setTimeout(() => {
-    claude.kill();
-    res.status(504).json({ error: 'Summary generation timed out' });
-  }, 60000);
-
-  claude.on('close', (code) => {
-    clearTimeout(timeout);
-    if (code === 0 && stdout.trim()) {
-      const raw = stdout.trim();
-      // Parse ABSTRACT: and DETAIL: sections
-      let abstract = '';
-      let detail = raw;
-      const abstractMatch = raw.match(/^ABSTRACT:\s*(.+?)(?:\n|$)/i);
-      if (abstractMatch) {
-        abstract = abstractMatch[1].trim();
-        const detailMatch = raw.match(/DETAIL:\s*\n?([\s\S]*)/i);
-        detail = detailMatch ? detailMatch[1].trim() : raw.replace(abstractMatch[0], '').trim();
-      }
-      const summary = {
-        abstract,
-        detail,
-        generatedAt: new Date().toISOString(),
-        eventCount,
-      };
-      const summaryPath = path.join(RECORDINGS_DIR, req.params.id + '.summary.json');
-      try {
-        fs.writeFileSync(summaryPath, JSON.stringify(summary, null, 2));
-      } catch {}
-      res.json(summary);
-    } else {
-      res.status(500).json({ error: stderr || 'Summary generation failed' });
+  try {
+    const raw = await callLLM(prompt, { maxTokens: 2048, timeoutMs: 60000 });
+    const trimmed = raw.trim();
+    // Parse ABSTRACT: and DETAIL: sections
+    let abstract = '';
+    let detail = trimmed;
+    const abstractMatch = trimmed.match(/^ABSTRACT:\s*(.+?)(?:\n|$)/i);
+    if (abstractMatch) {
+      abstract = abstractMatch[1].trim();
+      const detailMatch = trimmed.match(/DETAIL:\s*\n?([\s\S]*)/i);
+      detail = detailMatch ? detailMatch[1].trim() : trimmed.replace(abstractMatch[0], '').trim();
     }
-  });
+    const summary = {
+      abstract,
+      detail,
+      generatedAt: new Date().toISOString(),
+      eventCount,
+    };
+    const summaryPath = path.join(RECORDINGS_DIR, req.params.id + '.summary.json');
+    try {
+      fs.writeFileSync(summaryPath, JSON.stringify(summary, null, 2));
+    } catch {}
+    res.json(summary);
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Summary generation failed' });
+  }
+});
 
-  claude.on('error', (err) => {
-    clearTimeout(timeout);
-    res.status(500).json({ error: err.message });
-  });
+// --- LLM Config API ---
+app.get('/api/llm-config', (req, res) => {
+  const config = getLLMConfig();
+  const providers = config.providers || {};
+  const result = {
+    activeProvider: config.activeProvider || '',
+    providers: {},
+  };
+  for (const name of ['anthropic', 'gemini', 'openai']) {
+    result.providers[name] = {
+      configured: !!(providers[name] && providers[name].apiKey),
+    };
+  }
+  res.json(result);
+});
+
+app.put('/api/llm-config', (req, res) => {
+  const config = getLLMConfig();
+  if (req.body.activeProvider !== undefined) {
+    config.activeProvider = req.body.activeProvider;
+  }
+  if (req.body.providers) {
+    if (!config.providers) config.providers = {};
+    for (const [name, data] of Object.entries(req.body.providers)) {
+      if (data && data.apiKey !== undefined) {
+        config.providers[name] = { apiKey: data.apiKey };
+      }
+    }
+  }
+  saveLLMConfigFile(config);
+  // Return sanitized config (no keys exposed)
+  const providers = config.providers || {};
+  const result = {
+    activeProvider: config.activeProvider || '',
+    providers: {},
+  };
+  for (const name of ['anthropic', 'gemini', 'openai']) {
+    result.providers[name] = {
+      configured: !!(providers[name] && providers[name].apiKey),
+    };
+  }
+  // Broadcast LLM config status to all connected clients
+  const status = getLLMConfigStatus();
+  for (const [, clientWs] of clientConnections) {
+    if (clientWs.readyState === clientWs.OPEN) {
+      clientWs.send(JSON.stringify({ type: 'llm-config-status', ...status }));
+    }
+  }
+  res.json(result);
 });
 
 app.get('/api/file', (req, res) => {
@@ -586,6 +747,10 @@ wss.on('connection', (ws, req) => {
     return id;
   };
 
+  // Send LLM config status on connection
+  const llmStatus = getLLMConfigStatus();
+  sendMessage('llm-config-status', llmStatus);
+
   // Restore existing sessions or create initial session
   if (sessions.size > 0) {
     console.log(`Restoring ${sessions.size} sessions for client: ${clientId}`);
@@ -678,6 +843,8 @@ wss.on('connection', (ws, req) => {
         case 'check-claude-running': {
           const running = isClaudeRunningInSessions(sessions);
           sendMessage('claude-running-status', { running });
+          const llmCfgStatus = getLLMConfigStatus();
+          sendMessage('llm-config-status', llmCfgStatus);
           break;
         }
 
@@ -687,57 +854,21 @@ wss.on('connection', (ws, req) => {
             ? `Improve this English text to sound more natural and polished while keeping the same meaning. Fix any grammar or spelling errors too. Rules: Do NOT capitalize the first letter if the original doesn't. Do NOT add trailing punctuation if the original doesn't have it. Return ONLY the improved text, nothing else:\n\n${text}`
             : `Fix grammar and improve this English text. Rules: Do NOT capitalize the first letter if the original doesn't. Do NOT add trailing punctuation (period, comma, etc.) if the original doesn't have it. Only fix actual grammar and spelling errors. Return ONLY the corrected text, nothing else:\n\n${text}`;
 
-          // Use Haiku model for fast corrections
-          const claude = spawn('claude', ['-p', prompt, '--model', 'haiku'], {
-            stdio: ['ignore', 'pipe', 'pipe']
-          });
-
-          let stdout = '';
-          let stderr = '';
-
-          claude.stdout.on('data', (data) => {
-            stdout += data.toString();
-          });
-
-          claude.stderr.on('data', (data) => {
-            stderr += data.toString();
-          });
-
-          // Set timeout
-          const timeout = setTimeout(() => {
-            claude.kill();
-            sendMessage('correction-error', {
-              sessionId,
-              original: text,
-              error: 'Correction timed out'
-            });
-          }, 30000);
-
-          claude.on('close', (code) => {
-            clearTimeout(timeout);
-            if (code === 0 && stdout.trim()) {
+          callLLM(prompt, { timeoutMs: 30000 })
+            .then((result) => {
               sendMessage('correction-result', {
                 sessionId,
                 original: text,
-                corrected: stdout.trim()
+                corrected: result.trim(),
               });
-            } else {
+            })
+            .catch((err) => {
               sendMessage('correction-error', {
                 sessionId,
                 original: text,
-                error: stderr || 'Correction failed'
+                error: err.message || 'Correction failed',
               });
-            }
-          });
-
-          claude.on('error', (err) => {
-            clearTimeout(timeout);
-            sendMessage('correction-error', {
-              sessionId,
-              original: text,
-              error: err.message
             });
-          });
           break;
         }
 
