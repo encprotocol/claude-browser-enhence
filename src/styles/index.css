@@ -1071,6 +1071,69 @@ header h1 {
   font-size: 11px;
 }
 
+/* Recording viewer active tab */
+.recordings-viewer-btn.active {
+  border-color: var(--theme-accent);
+  color: var(--theme-accent);
+}
+
+/* Recording summary */
+.recording-summary {
+  padding: 24px 32px;
+}
+.recording-summary.empty {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 16px; min-height: 200px;
+}
+.recording-summary-abstract {
+  color: var(--theme-fg); font-size: 16px; font-weight: 600;
+  line-height: 1.5; margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--theme-button-border);
+}
+.recording-summary-detail {
+  color: var(--theme-fg); font-size: 14px; line-height: 1.8;
+  white-space: pre-wrap; word-break: break-word;
+}
+.recording-summary-footer {
+  display: flex; align-items: center; gap: 16px;
+  margin-top: 24px; padding-top: 16px;
+  border-top: 1px solid var(--theme-button-border);
+}
+.recording-summary-meta {
+  color: var(--theme-muted); font-size: 11px; flex: 1;
+}
+.recording-summary-generate {
+  background: var(--theme-button-bg);
+  border: 1px solid var(--theme-button-border);
+  border-radius: 6px; color: var(--theme-fg);
+  font-size: 13px; padding: 8px 20px; cursor: pointer;
+  transition: all 0.15s; flex-shrink: 0;
+}
+.recording-summary-generate:hover:not(:disabled) {
+  border-color: var(--theme-accent); color: var(--theme-accent);
+}
+.recording-summary-generate:disabled {
+  opacity: 0.4; cursor: not-allowed;
+}
+.recording-summary-stale {
+  background: rgba(233, 69, 96, 0.1);
+  border: 1px solid rgba(233, 69, 96, 0.3);
+  border-radius: 6px; padding: 8px 14px;
+  color: var(--theme-accent); font-size: 12px;
+  margin-bottom: 16px;
+}
+.recording-summary-loading {
+  display: flex; align-items: center; gap: 10px;
+  color: var(--theme-muted); font-size: 13px;
+}
+.recording-summary-disabled {
+  color: var(--theme-muted); font-size: 13px; text-align: center;
+}
+.recording-summary-error {
+  color: #ef4444; font-size: 13px; text-align: center;
+}
+
 /* Tab recording dot */
 .tab-recording-dot {
   width: 6px; height: 6px; border-radius: 50%;

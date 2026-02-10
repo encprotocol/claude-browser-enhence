@@ -209,6 +209,16 @@ app.get('/api/recordings', (req, res) => {
           buf = chars.join('').trim();
           firstInput = (prefix + buf).trim();
         }
+        // Check for sidecar summary file
+        let hasSummary = false;
+        let summaryEventCount;
+        const summaryPath = path.join(RECORDINGS_DIR, data.id + '.summary.json');
+        try {
+          const summaryData = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
+          hasSummary = true;
+          summaryEventCount = summaryData.eventCount;
+        } catch {}
+
         metas.push({
           id: data.id,
           sessionId: data.sessionId,
@@ -220,6 +230,8 @@ app.get('/api/recordings', (req, res) => {
           endedAt: data.endedAt,
           eventCount: data.events ? data.events.length : 0,
           firstInput: firstInput || null,
+          hasSummary,
+          summaryEventCount,
         });
       } catch {}
     }
@@ -243,7 +255,103 @@ app.get('/api/recordings/:id', (req, res) => {
 app.delete('/api/recordings/:id', (req, res) => {
   const filePath = path.join(RECORDINGS_DIR, req.params.id + '.json');
   try { fs.unlinkSync(filePath); } catch {}
+  // Also delete sidecar summary
+  const summaryPath = path.join(RECORDINGS_DIR, req.params.id + '.summary.json');
+  try { fs.unlinkSync(summaryPath); } catch {}
   res.json({ ok: true });
+});
+
+app.get('/api/recordings/:id/summary', (req, res) => {
+  const summaryPath = path.join(RECORDINGS_DIR, req.params.id + '.summary.json');
+  try {
+    const data = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
+    res.json(data);
+  } catch {
+    res.status(404).json({ error: 'No summary found' });
+  }
+});
+
+app.post('/api/recordings/:id/summary', (req, res) => {
+  const { transcript } = req.body;
+  if (!transcript) return res.status(400).json({ error: 'Missing transcript' });
+
+  // Verify recording exists
+  const recPath = path.join(RECORDINGS_DIR, req.params.id + '.json');
+  let eventCount = 0;
+  try {
+    const recData = JSON.parse(fs.readFileSync(recPath, 'utf8'));
+    eventCount = recData.events ? recData.events.length : 0;
+  } catch {
+    return res.status(404).json({ error: 'Recording not found' });
+  }
+
+  const prompt = `You are summarizing a terminal recording of a Claude Code session.
+
+Write your response in EXACTLY this format (keep the ABSTRACT: and DETAIL: labels):
+
+ABSTRACT: A single sentence (max 30 words) summarizing what was accomplished.
+
+DETAIL:
+A detailed summary of the session (3-8 paragraphs). Cover:
+- What the user asked for or wanted to achieve
+- Key actions taken and decisions made
+- Files modified or created
+- Problems encountered and how they were resolved
+- Final outcome and what was accomplished
+
+Write in past tense. Be specific about file names, functions, and technical details. Do not use bullet points in the detail section — write flowing paragraphs.
+
+Transcript:
+${transcript}`;
+
+  const claude = spawn('claude', ['-p', prompt, '--model', 'haiku'], {
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+
+  let stdout = '';
+  let stderr = '';
+
+  claude.stdout.on('data', (data) => { stdout += data.toString(); });
+  claude.stderr.on('data', (data) => { stderr += data.toString(); });
+
+  const timeout = setTimeout(() => {
+    claude.kill();
+    res.status(504).json({ error: 'Summary generation timed out' });
+  }, 60000);
+
+  claude.on('close', (code) => {
+    clearTimeout(timeout);
+    if (code === 0 && stdout.trim()) {
+      const raw = stdout.trim();
+      // Parse ABSTRACT: and DETAIL: sections
+      let abstract = '';
+      let detail = raw;
+      const abstractMatch = raw.match(/^ABSTRACT:\s*(.+?)(?:\n|$)/i);
+      if (abstractMatch) {
+        abstract = abstractMatch[1].trim();
+        const detailMatch = raw.match(/DETAIL:\s*\n?([\s\S]*)/i);
+        detail = detailMatch ? detailMatch[1].trim() : raw.replace(abstractMatch[0], '').trim();
+      }
+      const summary = {
+        abstract,
+        detail,
+        generatedAt: new Date().toISOString(),
+        eventCount,
+      };
+      const summaryPath = path.join(RECORDINGS_DIR, req.params.id + '.summary.json');
+      try {
+        fs.writeFileSync(summaryPath, JSON.stringify(summary, null, 2));
+      } catch {}
+      res.json(summary);
+    } else {
+      res.status(500).json({ error: stderr || 'Summary generation failed' });
+    }
+  });
+
+  claude.on('error', (err) => {
+    clearTimeout(timeout);
+    res.status(500).json({ error: err.message });
+  });
 });
 
 app.get('/api/file', (req, res) => {

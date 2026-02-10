@@ -394,6 +394,15 @@ function groupOutputBlocks(events: Array<{ t: number; data: string }>): OutputBl
   return blocks;
 }
 
+/**
+ * Format transcript segments into a labeled text suitable for an LLM prompt.
+ */
+export function formatTranscriptForPrompt(segments: TranscriptSegment[]): string {
+  return segments
+    .map(s => `[${s.type}] ${s.text}`)
+    .join('\n');
+}
+
 // === Main transcript builder ===
 
 /**

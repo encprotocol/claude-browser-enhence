@@ -73,6 +73,15 @@ export interface RecordingEvent {
   data: string;
 }
 
+export interface RecordingSummary {
+  abstract: string;
+  detail: string;
+  /** @deprecated kept for backward compat with old sidecar files */
+  summary?: string;
+  generatedAt: string;
+  eventCount: number;
+}
+
 export interface RecordingMeta {
   id: string;
   sessionId: string;
@@ -84,6 +93,8 @@ export interface RecordingMeta {
   cols?: number;
   rows?: number;
   firstInput?: string | null;
+  hasSummary?: boolean;
+  summaryEventCount?: number;
 }
 
 export interface Recording extends RecordingMeta {

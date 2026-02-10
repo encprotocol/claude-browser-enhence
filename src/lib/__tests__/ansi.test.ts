@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { stripAnsi, buildCleanTranscript, cleanInputBuffer } from '@/lib/ansi';
+import { stripAnsi, buildCleanTranscript, cleanInputBuffer, formatTranscriptForPrompt } from '@/lib/ansi';
 import type { RecordingEvent } from '@/types';
 
 describe('stripAnsi', () => {
@@ -641,5 +641,44 @@ describe('cleanInputBuffer', () => {
   it('strips all escape sequences then handles backspaces', () => {
     // Simulates: focus out, focus in, typing with corrections
     expect(cleanInputBuffer('Can you \x1b[O\x1b[Ican you \x1b[Itell me')).toBe('Can you can you tell me');
+  });
+});
+
+describe('formatTranscriptForPrompt', () => {
+  it('labels input segments', () => {
+    const result = formatTranscriptForPrompt([
+      { type: 'input', text: 'ls -la' },
+    ]);
+    expect(result).toBe('[input] ls -la');
+  });
+
+  it('labels response segments', () => {
+    const result = formatTranscriptForPrompt([
+      { type: 'response', text: 'file1.txt\nfile2.txt' },
+    ]);
+    expect(result).toBe('[response] file1.txt\nfile2.txt');
+  });
+
+  it('labels mixed segment types', () => {
+    const result = formatTranscriptForPrompt([
+      { type: 'input', text: 'help me' },
+      { type: 'response', text: 'Sure, here is the plan.' },
+      { type: 'tool-use', text: 'Read(src/main.ts)' },
+    ]);
+    const lines = result.split('\n');
+    expect(lines[0]).toBe('[input] help me');
+    expect(lines[1]).toBe('[response] Sure, here is the plan.');
+    expect(lines[2]).toBe('[tool-use] Read(src/main.ts)');
+  });
+
+  it('returns empty string for empty segments', () => {
+    expect(formatTranscriptForPrompt([])).toBe('');
+  });
+
+  it('handles multiline segment text', () => {
+    const result = formatTranscriptForPrompt([
+      { type: 'response', text: 'line one\nline two\nline three' },
+    ]);
+    expect(result).toBe('[response] line one\nline two\nline three');
   });
 });

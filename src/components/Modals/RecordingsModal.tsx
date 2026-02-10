@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRecordingStore } from '@/stores/recordingStore';
+import { useCorrectionStore } from '@/stores/correctionStore';
 import RecordingPlayer from '@/components/Modals/RecordingPlayer';
 import type { Recording } from '@/types';
 
@@ -23,13 +24,114 @@ function formatDate(iso: string): string {
   });
 }
 
+type ViewerTab = 'terminal' | 'summary';
+
+function SummaryTab({ recording }: { recording: Recording }) {
+  const summary = useRecordingStore((s) => s.summary);
+  const summaryLoading = useRecordingStore((s) => s.summaryLoading);
+  const summaryError = useRecordingStore((s) => s.summaryError);
+  const claudeRunning = useCorrectionStore((s) => s.claudeRunning);
+
+  const isStale = summary && recording.events.length > summary.eventCount;
+
+  const handleGenerate = () => {
+    useRecordingStore.getState().generateSummary(recording.id);
+  };
+
+  const claudeUnavailable = claudeRunning === false;
+
+  // Backward compat: old summaries have `summary` but no `abstract`/`detail`
+  const abstractText = summary?.abstract || '';
+  const detailText = summary?.detail || summary?.summary || '';
+
+  if (summaryLoading) {
+    return (
+      <div className="recording-summary empty">
+        <div className="recording-summary-loading">
+          <div className="spinner" />
+          Generating summary...
+        </div>
+      </div>
+    );
+  }
+
+  if (summaryError) {
+    return (
+      <div className="recording-summary empty">
+        <div className="recording-summary-error">{summaryError}</div>
+        <button className="recording-summary-generate" onClick={handleGenerate}>
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (!summary) {
+    return (
+      <div className="recording-summary empty">
+        <button
+          className="recording-summary-generate"
+          onClick={handleGenerate}
+          disabled={claudeUnavailable}
+        >
+          Generate Summary
+        </button>
+        {claudeUnavailable && (
+          <div className="recording-summary-disabled">
+            Claude is not running in any session.
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="recording-summary">
+      {isStale && (
+        <div className="recording-summary-stale">
+          New activity recorded since this summary was generated.
+        </div>
+      )}
+      {abstractText && (
+        <div className="recording-summary-abstract">{abstractText}</div>
+      )}
+      <div className="recording-summary-detail">{detailText}</div>
+      <div className="recording-summary-footer">
+        <div className="recording-summary-meta">
+          Generated {formatDate(summary.generatedAt)} ({summary.eventCount} events)
+        </div>
+        <button
+          className="recording-summary-generate"
+          onClick={handleGenerate}
+          disabled={claudeUnavailable}
+        >
+          Regenerate
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function RecordingViewer({ recording }: { recording: Recording }) {
+  const [activeTab, setActiveTab] = useState<ViewerTab>('terminal');
   const handleBack = () => useRecordingStore.getState().closeViewer();
 
   return (
     <div className="recordings-viewer visible">
       <div className="recordings-viewer-toolbar">
         <button className="recordings-viewer-btn" onClick={handleBack}>← Back</button>
+        <button
+          className={`recordings-viewer-btn${activeTab === 'terminal' ? ' active' : ''}`}
+          onClick={() => setActiveTab('terminal')}
+        >
+          Terminal
+        </button>
+        <button
+          className={`recordings-viewer-btn${activeTab === 'summary' ? ' active' : ''}`}
+          onClick={() => setActiveTab('summary')}
+        >
+          Summary
+        </button>
         <span className="recordings-viewer-info">
           {recording.sessionName} — {recording.cwd}
         </span>
@@ -37,9 +139,15 @@ function RecordingViewer({ recording }: { recording: Recording }) {
           {formatDate(recording.startedAt)} — {formatDuration(recording.startedAt, recording.endedAt)}
         </span>
       </div>
-      <div className="recordings-viewer-content recordings-viewer-terminal">
-        <RecordingPlayer recording={recording} />
-      </div>
+      {activeTab === 'terminal' ? (
+        <div className="recordings-viewer-content recordings-viewer-terminal">
+          <RecordingPlayer recording={recording} />
+        </div>
+      ) : (
+        <div className="recordings-viewer-content">
+          <SummaryTab recording={recording} />
+        </div>
+      )}
     </div>
   );
 }
